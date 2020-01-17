@@ -1,0 +1,32 @@
+{
+  "name": "parser",
+  "version": "1.0.0",
+  "description": "Parser for programming languages, used to analyze their structures, axiomatically you can use it to parse math expressions.",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ms2052001/Parser.git"
+  },
+  "keywords": [
+    "parser",
+    "math-parser",
+    "math",
+    "text-analysis"
+  ],
+  "author": "Mohammed Samir",
+  "license": "Apache",
+  "bugs": {
+    "url": "https://github.com/ms2052001/Parser/issues"
+  },
+  "homepage": "https://github.com/ms2052001/Parser#readme",
+  "devDependencies": {
+    "@babel/core": "^7.8.3",
+    "@babel/preset-env": "^7.8.3",
+    "babel-loader": "^8.0.6",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10"
+  }
+}
