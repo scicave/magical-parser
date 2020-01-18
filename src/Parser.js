@@ -7,10 +7,7 @@
  */
 
 import sNode from './sNode';
-import block from './blocks';
 import environments from './environments';
-import { NormalModuleReplacementPlugin } from 'webpack';
-
 export default class Parser{
 
    constructor(env = 'math', options = {}){
@@ -35,28 +32,53 @@ export default class Parser{
    }
    set options(options) {
 
-      this._options = Object.assign({}, options);
+      this._options = Object.assign({}, options); // clonning options 
+      options = this._options; /// make this._options a reference for options
+      
       //#region 
 
       // sort the array to be progressively according to zIndex property.
-
       this._options.operators = options.operators.sort(function (a, b) {
          return -(a.zIndex - b.zIndex); // the negative sign is for reverse the array;
       });
 
+      let noRepetition = true;
+
+      //#region  allRegex
+
       let allRegex = ' ';
-      for (let op of options) {
+      options.allRegex = {};
+
+      for (let i = 0; i < options.operators.length; i++) {
+         let op = options.operators[i];
+         if (allRegex.indexOf(' ' + op.toString() + ' ') > -1) {
+            /// op aleardy exists (it is repeted)
+            options.operators.splice(i, 1); // delete it 
+         }
          allRegex += op.toString() + ' ';
       }
       allRegex = new RegExp(allRegex);
-      options.operators.allRegex = allRegex;
+      options.allRegex.operators = allRegex;
 
-      let noRepetition = true;
-      for (let op of options) {
-         noRepetition = (allRegex.indexOf(' ' + op.toString() + ' ') === -1) && noRepetition;
-         allRegex += op.toString() + ' ';
+      allRegex = ' ';
+      for (let preop of options.prefixOperators) {
+         noRepetition = (allRegex.indexOf(' ' + op.toString() + ' ') === -1) && noRepetition; // when you get the first repition noRepetition will be false for the rest of this loop
+         allRegex += preop.toString() + ' ';
       }
+      allRegex = new RegExp(allRegex);
+      options.allRegex.prefixOperators = allRegex;
+
+      allRegex = ' ';
+      for (let sufop of options.prefixOperators) {
+         allRegex += sufop.toString() + ' ';
+      }
+      allRegex = new RegExp(allRegex);
+      options.allRegex.sufixOperators = allRegex;
+
+      //#endregion
+
       options.operators.noRepetition = noRepetition;
+
       //#endregion
 
       options.
@@ -276,7 +298,7 @@ export default class Parser{
          .replace(new RegExp(num++, 'g'), 'h')
          .replace(new RegExp(num++, 'g'), 'i')
          .replace(new RegExp(num++, 'g'), 'j');
-   }
+   } 
    
    //#endregion
 

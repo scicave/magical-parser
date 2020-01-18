@@ -1,1 +1,1 @@
-import Parser from './Parser';
+module.exports = require('./Parser').default;

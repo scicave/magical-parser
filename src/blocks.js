@@ -4,9 +4,11 @@
 export default class block{
 
    constructor(options = {}) {
+
       this.openingChar = options.openingChar;
       this.closingChar = options.closingChar;
-      this.zIndex = zIndex;
+      this.zIndex = options.zIndex;
+      
       this.opened = false;
       this.num = 0;
    }

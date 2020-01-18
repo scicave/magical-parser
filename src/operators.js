@@ -1,22 +1,26 @@
 
 export var __checker = {
    symbols: '!@#$%^&*-+=\\/*.~×÷:;<>?؛',
-   isSymbol: (c) => (this.symbols.indexof(c) > -1),
-   isNum: (c) => !isNaN(c),
-   isAlpha: (c) => !isNum(c) && !isSymbol(c),
-   spaced: (c) => !isSymbol(c)
+   isSymbol: (c) => (__checker.symbols.indexOf(c) > -1),
+   isNum: (c) => !__checker.isNaN(c),
+   isAlpha: (c) => !__checker.isNum(c) && !__checker.isSymbol(c),
+   spaced: (c) => !__checker.isSymbol(c)
 };
 
 
 export class commonOperator {
-   constructor(name, zIndex = 0) {
-      this.name = name;
-      this.zIndex = zIndex;
+   constructor(options) {
+      options = options || {};
+      options = { zIndex: 0, ...options };
+      this.name = options.name;
+      this.zIndex = options.zIndex;
    }
    get name() {
       return this._name;
    }
    set name(val) {
+
+      if (!val || val === '') throw new Error('operator name can not be void or empty');
 
       this._name = val.toString();
 
@@ -26,7 +30,7 @@ export class commonOperator {
       // spaced property
 
       this.spaced = {
-         right: {__checker.spaced(val[0])},
+         right: __checker.spaced(val[0]),
          left: __checker.spaced(val[val.toString().length - 1])
       };
 
@@ -53,26 +57,26 @@ export class commonOperator {
 }
 
 export class operator extends commonOperator {
-   constructor() {
-      super(name, zIndex);
+   constructor(options) {
+      super(options);
    }
 }
 
 export class suffixOperator extends commonOperator {
-   constructor() {
-      super(name, zIndex);
+   constructor(options) {
+      super(options);
    }
 }
 
 export class prefixOperator extends commonOperator {
-   constructor() {
-      super(name, zIndex);
+   constructor(options) {
+      super(options);
    }
 }
 
 export class separator extends commonOperator {
-   constructor() {
-      super(name, zIndex);
+   constructor(options) {
+      super(options);
    }
 }
 
