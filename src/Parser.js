@@ -6,13 +6,19 @@
  *
  */
 
-import sNode from './sNode';
-import environments from './environments';
+// import sNode from './sNode';
+import environments from './environments.js';
+import sNode from './sNode.js';
+import { repRegSpecialChars } from './global.js';
 export default class Parser{
 
    constructor(env = 'math', options = {}){
       this.setEnvironment(env, options);
+      this.reservedChars = [
+         ''
+      ];
       this.__randomNameNum = 0;
+      this.__realPos = 0;
    }
 
    //#region getter, setter
@@ -24,7 +30,9 @@ export default class Parser{
    }
    setEnvironment(env, options) {
       this._environment = env;
-      this.options = { ...environments.get(env), ...options }; /// options properties will override the default options of the environment
+      this._options = environments.get(env);
+      if (options) 
+         this.options = options;
    }
 
    get options() {
@@ -32,58 +40,54 @@ export default class Parser{
    }
    set options(options) {
 
-      this._options = Object.assign({}, options); // clonning options 
+      Object.assign(this._options, options);
       options = this._options; /// make this._options a reference for options
       
       //#region 
 
-      // sort the array to be progressively according to zIndex property.
-      this._options.operators = options.operators.sort(function (a, b) {
-         return -(a.zIndex - b.zIndex); // the negative sign is for reverse the array;
-      });
+      //#region all
 
-      let noRepetition = true;
+      let all = {
+         operators: ' ',
+         prefixOperators: ' ',
+         suffixOperators: ' ',
+      };
 
-      //#region  allRegex
-
-      let allRegex = ' ';
-      options.allRegex = {};
-
-      for (let i = 0; i < options.operators.length; i++) {
-         let op = options.operators[i];
-         if (allRegex.indexOf(' ' + op.toString() + ' ') > -1) {
-            /// op aleardy exists (it is repeted)
-            options.operators.splice(i, 1); // delete it 
+      let processArr = (arr) => {
+         if (arr && arr.length > 0) {
+            let _all = ' ';
+            for (let i = 0; i < arr.length; i++) {
+               let op = arr[i];
+               _all.replace(new RegExp(` @_(${op.name})_@ #_(\\d*)_# `), (match, opName, opIndex) => {
+                  Object.assign(arr[i], arr[parseInt(opIndex)]);
+                  arr.splice(parseInt(opIndex), 1); // removing the previous operator wiht the same name
+               });
+               _all += '@_' + op.toString() + '_@ ' + '#_' + i + '_# ';
+            }
+            return _all;
          }
-         allRegex += op.toString() + ' ';
-      }
-      allRegex = new RegExp(allRegex);
-      options.allRegex.operators = allRegex;
+      };
 
-      allRegex = ' ';
-      for (let preop of options.prefixOperators) {
-         noRepetition = (allRegex.indexOf(' ' + op.toString() + ' ') === -1) && noRepetition; // when you get the first repition noRepetition will be false for the rest of this loop
-         allRegex += preop.toString() + ' ';
-      }
-      allRegex = new RegExp(allRegex);
-      options.allRegex.prefixOperators = allRegex;
+      all.operators = processArr(options.operators);
+      all.prefixOperators = processArr(options.prefixOperators);
+      all.suffixOperators = processArr(options.suffixOperators);
 
-      allRegex = ' ';
-      for (let sufop of options.prefixOperators) {
-         allRegex += sufop.toString() + ' ';
-      }
-      allRegex = new RegExp(allRegex);
-      options.allRegex.sufixOperators = allRegex;
+      options.all = all;
 
       //#endregion
+      
+      // sort the array to be inversely according to zIndex property.
+      if (options.operators)
+         options.operators = options.operators.sort(function (a, b) {
+            return -(a.zIndex - b.zIndex); // the negative sign is for reverse the array;
+         });
 
-      options.operators.noRepetition = noRepetition;
-
+      options.blocks = {
+         values: options.blocks,
+         openedBlock: null
+      };
+ 
       //#endregion
-
-      options.
-      this._options = options;
-
    }
    //#endregion
 
@@ -106,28 +110,24 @@ export default class Parser{
       operators = operators.reverse().flat(); // to use it in for loop, with a tricky algorithm will satisfy the process.
       var prefixOperators = options.prefixOperators;
       var suffixOperators = options.suffixOperators;
-      // checking errors
-      var sendError = function (msg, pos) {
-         // (new Array(pos)).fill('_')     is the same as     '_'.repeat(pos)
-         throw new Error(msg + '\n' + str + '\n' + (new Array(pos)).fill('_').join('') + '^');
-      };
-      let forbiddenSymbols = options.forbiddenSymbols;
-      if (!operations) {
-         if (this.__contains(str, ...forbiddenSymbols)) sendError('forbidden symbol.');
-      }
+      var forbiddenSymbols = options.forbiddenSymbols;
 
+      // checking errors
+     
+      if (!operations) {
+         if (this.__contains(str, ...forbiddenSymbols)) this.__sendError('forbidden symbol.');
+      }
       operations = operations || []; /// if you put this line before the direct last if statement, if statement will be ignored, or the inside code won't be processed
 
       var snode;
 
       // if empty of characters
-
       str.replace(/^\s*$/, () => {
          snode = new sNode('');
       }); if (snode) return snode;
 
-      let a = processBrackets(str);
-      str = a.str; operations = a.operations;
+      str = this.__processBlocks(str, options, operators);
+      str = this.__prepareOpertors(str, options, operators);
       //#endregion
 
       //#region final codes
@@ -233,73 +233,157 @@ export default class Parser{
    __processOptions (options) {
 
    }
-   __processBrackets(str, options, operations) {
+   __processBlocks(str, options, operations) {
       
       //#region brackets
+      var that = this;
+      var blocks = options.blocks;
 
-      var blocks = this.options.blocks;
+      let __processBlock__ = function(index) {
+         //// checking error,,, this ill be done on handling bracket's content, so don't do for this. 
+         let name = that.__getRandomName();
+         
+         let str_ = str.slice(index.opening, index.closing); /// cut the text from the next sibiling of the opening char until the current closingChar index
+         let b = blocks.openedBlock.ref;
+         let searchingTxt = b.openingChar + str_ + b.closingChar;
+         str = str.replace(new RegExp(repRegSpecialChars(searchingTxt), 'g'), name); // if the replacement is global or not, there will no be any problem.
+         
+         let snChild;
+         if (b.handleContent) {                  
+            snChild = that.parse(str_, options); /// here you are parsing new string with no operations yet. /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
+         } else {
+            snChild = new sNode('undefined', [], {content: str_}); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
+         }
+         let sn = new sNode('block', [snChild], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.openingChar + b.closingChar});
+         operations.push({ name: name, sNode: sn });
+         
+         b.opened = false; blocks.openedBlock = null; // reset
 
-      for (let i = 0; i < str.length; i++) {
+         return index.closing + (name.length - searchingTxt.length); /// new_i /// setting the index, as the string may shrink or be taller, it depends on the length of the name
+      };
 
-         for (let b of blocks.values) {
-            let c = str[i];
-            if (c === b.openingChar) {
-               b.num++;
-               if (!blocks.openedBlock.index) { /// if not open, then open
-                  b.opened = true;
-                  blocks.openedBracket.ref = b;
-                  blocks.openedBracket.index = i;
+      let __processBlocks__ = function(i_intial = 0) {
+         let __incre = 0;
+         for (let i = i_intial; i < str.length; i++) {
+            i += __incre;
+            __incre = 0;
+            if (that.__realPos) that.__realPos++;
+            for (let b of blocks.values) {
+               /// if a block is opened, closing has the priority, unless, opening has the priority::: you can notice this in ***Mohammed***, if you check the opening char first the num will increase to 2, thus the block will not be closed,,, and an error will occur.
+               if (blocks.openedBlock) {
+                  if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
+                     let iof = options.blocks.openedBlock.ref.openingChar.indexOf(b.closingChar);
+                     if (iof > -1) {
+                        // this.options.blocks.openedBlock.ref.openingChar  contains  b.closingChar::: for example *** contains **, you can use these blocks formatting typing, **Mohammed** will be bold.
+                        options.blocks.openedBlock.mayCloseAt = { ref: b, index: i, iof };
+                     } else {
+                        b.num--;
+                     }
+                  } else if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
+                     b.num++;
+                     __incre = b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+                     if (!blocks.openedBlock) { /// if not open, then open
+                        b.opened = true;
+                        blocks.openedBlock = { ref: b, index: i };
+                     }
+                  }
+               } else {
+                  if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
+                     b.num++;
+                     __incre = b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+                     // if (!blocks.openedBlock) { /// if not open, then open
+                     b.opened = true;
+                     blocks.openedBlock = { ref: b, index: i };
+                     // }
+                  } else if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
+                     // there should be an error
+                     that.__sendError('error on brackets.', str, that.__realPos);
+                  }
                }
-            } else if (c === b.closingChar) {
-               b.num--;
-            }
-            /// when a bracket is close, but not opened. e.g. ::: " 1+2-5) "
-            if (b.num < 0) {
-               sendError('error on brackets.', i);
-            }
+            
+               /// when a bracket is close, but not opened. e.g. ::: " 1+2-5) "
+               if (b.num < 0) {
+                  that.__sendError('error on brackets.', str, that.__realPos);
+               }
 
-            /// if true, the bracket's block is defined.
-            if (b.num === 0 && b.opened) { /// may other brackets' num be zero, as it does not exist or as it is closed but it closed inside the block that we are setting,,, e.g.::: " 1+2({1,2,3}^-1) "
-               //// checking error,,, this ill be done on handling for the bracket's content, so don't do for this. 
-               // if (brkts['['].num > 0) { sendError('bracket ] is missed.', i - 1); }
-               // if (brkts['('].num > 0) { sendError('bracket ) is missed.', i - 1); }
-               let name = this.__getRandomName();
-               let str_ = str.slice(brkts.index + 1, i); /// cut the text from the next sibiling of the opened bracket until the current closingChar index
-               str = str.replace(new RegExp(b.openingChar + str_ + b.closingChar, 'g'), name); // if the replacement is global or not, there will no be any problem.
-               i = str.search(name) + name.length; /// setting the index, as the string may shrink or be taller, it depends on the length of the name
-               let snChild = stringTOsnode(str_, options); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
-               let sn = new sNode(b.openingChar + b.closingChar, name, [snChild]);
-               operations.push({ name: name, sNode: sn });
-               b.opened = false; blocks.opendBlock = { ref: null, index: null }; // reset
+               /// if true, the bracket's block is defined.
+               if (b.num === 0 && b.opened) { /// may other brackets' num be zero, as it does not exist or as it is closed but it closed inside the block that we are setting,,, e.g.::: " 1+2({1,2,3}^-1) "
+                  let index = {
+                     opening: blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length,
+                     closing: i
+                  };
+                  i = __processBlock__(index); /// __processBlock__ return the new_i
+               }
             }
          }
-
-      }
+      };
+      __processBlocks__(0);
       /// after finishing looping searching for brackets blocks, oooops, what is this?!!!, oh, the bracket is not closed. send an error
-      if (blocks.opendBracket) {
-         sendError('block is not closed.', str.length);
+      if (blocks.openedBlock) {
+         if(blocks.openedBlock.mayCloseAt){
+            let index = {
+
+               opening:
+                  blocks.openedBlock.index +
+                  // blocks.openedBlock.mayCloseAt.ref.openingChar.length +    this will be added later
+                  blocks.openedBlock.mayCloseAt.iof,
+               
+               closing: blocks.openedBlock.mayCloseAt.index
+               
+            };
+            blocks.openedBlock.ref.opened = false;
+            blocks.openedBlock = { ref: blocks.openedBlock.mayCloseAt.ref, index: index.opening};
+            index.opening += blocks.openedBlock.ref.openingChar.length;
+
+            that.__realPos = undefined;
+            let new_i = __processBlock__(index);
+            __processBlocks__(new_i);
+
+         } else {
+            this.__sendError('block is not closed.', str, str.length);
+         }
       }
 
       //#endregion
 
-      return { str, operations };
+      return str;
 
+   }
+   __prepareOpertors(str, options, operations) {
    }
    __getRandomName () {
       let num = 0;
-      return (Date.now() + this.__randomNameNum++).toString(36)
-         .replace(new RegExp(num++, 'g'), 'a') /// Ia ma using Regex for global replacement.
-         .replace(new RegExp(num++, 'g'), 'b')
-         .replace(new RegExp(num++, 'g'), 'c')
-         .replace(new RegExp(num++, 'g'), 'd')
-         .replace(new RegExp(num++, 'g'), 'e')
-         .replace(new RegExp(num++, 'g'), 'f')
-         .replace(new RegExp(num++, 'g'), 'g')
-         .replace(new RegExp(num++, 'g'), 'h')
-         .replace(new RegExp(num++, 'g'), 'i')
-         .replace(new RegExp(num++, 'g'), 'j');
+      /// randomNameNum is here to avoid getting the same random name if the code is implemented so fast
+      return "##" +
+            (Date.now() + this.__randomNameNum++).toString(36)
+               .replace(new RegExp(num++, 'g'), 'a') /// Ia ma using Regex for global replacement.
+               .replace(new RegExp(num++, 'g'), 'b')
+               .replace(new RegExp(num++, 'g'), 'c')
+               .replace(new RegExp(num++, 'g'), 'd')
+               .replace(new RegExp(num++, 'g'), 'e')
+               .replace(new RegExp(num++, 'g'), 'f')
+               .replace(new RegExp(num++, 'g'), 'g')
+               .replace(new RegExp(num++, 'g'), 'h')
+               .replace(new RegExp(num++, 'g'), 'i')
+               .replace(new RegExp(num++, 'g'), 'j') + 
+            '##';
    } 
-   
+   __sendError(msg, str = '', pos = undefined) {
+      // (new Array(pos)).fill('_')     is the same as     '_'.repeat(pos)
+      str = str || '';
+      str = str === '' ? '' : '\n' + str + '\n';
+      if (!isNaN(pos)) {
+         pos = (new Array(pos)).fill('_').join('') + '^';
+      } else if(pos){
+         // here the text in parsing process is multi line.
+         pos = `position: ${pos}`;
+      } else {
+         // pos is a falsy value
+         pos = '';
+      }
+
+      throw new Error(msg + str + pos);
+   }
    //#endregion
 
 }

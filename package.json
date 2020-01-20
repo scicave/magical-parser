@@ -1,5 +1,5 @@
 {
-  "name": "parser",
+  "name": "Parser",
   "version": "1.0.0",
   "description": "Parser for programming languages, used to analyze their structures, axiomatically you can use it to parse math expressions.",
   "main": "./src/index.js",

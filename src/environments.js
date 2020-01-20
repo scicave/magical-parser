@@ -1,12 +1,22 @@
 
-import { operator, separator, prefixOperator, suffixOperator } from './operators'; 
-import block from './blocks';
+import { operator, separator, prefixOperator, suffixOperator } from './operators.js'; 
+import block from './blocks.js';
 
 export default new Map([
    /**
-    * [key is mode, value is env]
-    * env has {mode, options}
+    * [key is env, value is options]
     */
+
+   [
+      'new',
+      {
+         operators: [],
+         suffixOperators: [],
+         prefixOperators:[],
+         blocks: [],
+      }
+   ],
+
    [
       "math",
       {
@@ -32,11 +42,13 @@ export default new Map([
             new prefixOperator({ name: '-' }),
             new prefixOperator({ name: 'bnot' })
          ],
+
          suffixOperators: [
             new suffixOperator({ name: '!' }),
             new suffixOperator({ name: '++' }),
             new suffixOperator({ name: '--' })
          ],
+
          operators: [
 
             new operator({ name: '^',          zIndex: 10 }), // the first operator to process
@@ -73,23 +85,22 @@ export default new Map([
             new operator({ name: '=',          zIndex: 0}) // the last operator to be applied
 
          ],
+
          separators: [
             new separator({ name: ',' }),
             new separator({ name: ';' })
          ],
 
-         block: {
-            values: [
-               new block({ openingChar: '{', closingChar: '}', num: 0, opened: false }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
-               new block({ openingChar: '[', closingChar: ']', num: 0, opened: false }),
-               new block({ openingChar: '(', closingChar: ')', num: 0, opened: false }),
-               new block({ openingChar: '"', closingChar: '"', num: 0, opened: false }),
-               new block({ openingChar: "'", closingChar: "'", num: 0, opened: false })
-            ], /// we can deal with quotes with the same procedures as the brackets.
-            openedBlock: { ref: null, index: null }
-         },
+         blocks: [
+            new block({ openingChar: '{', closingChar: '}', num: 0, opened: false }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
+            new block({ openingChar: '[', closingChar: ']', num: 0, opened: false }),
+            new block({ openingChar: '(', closingChar: ')', num: 0, opened: false }),
+            new block({ openingChar: '"', closingChar: '"', num: 0, opened: false }),
+            new block({ openingChar: "'", closingChar: "'", num: 0, opened: false })
+         ], 
 
          forbiddenSymbols: []
       }
    ]
+
 ]);

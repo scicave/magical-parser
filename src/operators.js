@@ -1,4 +1,6 @@
 
+import { strTOreg } from './global.js';
+
 export var __checker = {
    symbols: '!@#$%^&*-+=\\/*.~×÷:;<>?؛',
    isSymbol: (c) => (__checker.symbols.indexOf(c) > -1),
@@ -25,7 +27,7 @@ export class commonOperator {
       this._name = val.toString();
 
       // preparing regex for parsing process
-      this.regex = this._name.replace(/[+*/.$^]/g, (match) => { return '\\' + match; }); // replacing special chars
+      this.regex = strTOreg(this._name); // replacing special chars
 
       // spaced property
 

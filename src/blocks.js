@@ -8,9 +8,11 @@ export default class block{
       this.openingChar = options.openingChar;
       this.closingChar = options.closingChar;
       this.zIndex = options.zIndex;
-      
+      this.handleContent = options.handleContent;
+
       this.opened = false;
       this.num = 0;
+      
    }
 
 }

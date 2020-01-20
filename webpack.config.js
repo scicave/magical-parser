@@ -45,7 +45,6 @@ function getFileExtension(libraryTarget) {
    return fileExtention;
 }
 
-
 var getOutput = (options) => {
       var fileExtention = getFileExtension(options.libraryTarget);
 
@@ -81,7 +80,7 @@ function createConfig(options) {
       entry,
       output,
       devtool: 'source-map',
-      watch: true,
+      watch: false,
       module: {
          rules: [
             {
