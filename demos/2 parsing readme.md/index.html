@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <meta http-equiv="X-UA-Compatible" content="ie=edge">
+   <title>README parser</title>
+   <style>
+      body{
+         display: grid;
+         place-items: center;
+         background: rgb(108, 128, 133);
+         padding: 40px 20px;
+      }
+
+      .container{
+         padding: 10px;
+         display: flex;
+         flex-flow: column nowrap;
+      }
+
+      .container input, .container div{
+         width: 100%;
+      }
+
+   </style>
+</head>
+
+<body>
+   <div class="container">
+      <input type="text-area" id="md-input">
+      <div class="md-output"></div>
+   </div>
+
+   <script src="./script.js" type='module'></script>
+</body>
+
+</html>

@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ms2052001/Parser.git"
+    "url": "git+https://github.com/scicave/Parser.git"
   },
   "keywords": [
     "parser",
@@ -22,9 +22,9 @@
   },
   "license": "Apache",
   "bugs": {
-    "url": "https://github.com/ms2052001/Parser/issues"
+    "url": "https://github.com/scicave/Parser/issues"
   },
-  "homepage": "https://github.com/ms2052001/Parser#readme",
+  "homepage": "https://github.com/scicave/Parser#readme",
   "devDependencies": {
     "@babel/core": "^7.8.3",
     "@babel/preset-env": "^7.8.3",

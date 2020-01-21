@@ -1,21 +1,14 @@
 
-import { strTOreg } from './global.js';
-
-export var __checker = {
-   symbols: '!@#$%^&*-+=\\/*.~×÷:;<>?؛',
-   isSymbol: (c) => (__checker.symbols.indexOf(c) > -1),
-   isNum: (c) => !__checker.isNaN(c),
-   isAlpha: (c) => !__checker.isNum(c) && !__checker.isSymbol(c),
-   spaced: (c) => !__checker.isSymbol(c)
-};
+import { strTOreg, checker } from './global.js';
 
 
 export class commonOperator {
    constructor(options) {
       options = options || {};
-      options = { zIndex: 0, ...options };
-      this.name = options.name;
-      this.zIndex = options.zIndex;
+      options = { zIndex: 0, ...options }; // overriding default options by the passed options (options argument)
+      Object.assign(this, options);
+      // this.name = options.name;
+      // this.zIndex = options.zIndex;
    }
    get name() {
       return this._name;
@@ -32,8 +25,8 @@ export class commonOperator {
       // spaced property
 
       this.spaced = {
-         right: __checker.spaced(val[0]),
-         left: __checker.spaced(val[val.toString().length - 1])
+         right: checker.spaced(val[0]),
+         left: checker.spaced(val[val.toString().length - 1])
       };
 
    }
