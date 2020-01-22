@@ -1,48 +1,24 @@
 import Parser from "../../src/Parser.js";
-import block from "../../src/blocks.js";
-import { specialRegex } from '../../src/global.js';
+// import block from "../../src/blocks.js";
+// import { specialRegex } from '../../src/global.js';
 
-
-let p = new Parser('new', {
-   blocks: [
-      new block({
-         openingChar: '**',
-         closingChar: '*',
-         handleContent: false,
-         contentTest: /[^\s*]/,
-         mustOpen: false,
-         mustClose: true,
-      }),
-      new block({
-         openingChar: '("',
-         closingChar: '")',
-         handleContent: false,
-         mustOpen: false,
-         mustClose: true,
-      }),
-      new block({
-         openingChar: '"',
-         closingChar: '"',
-         handleContent: false,
-         mustOpen: true,
-         mustClose: false,
-      }),
-   ],
+var p = new Parser('math', {
+   autoMultSign: true,
 });
 
+let valueTOparse = `m*s^num++-3!(1+2)`;
 
-let operations = [];
-let valueTOparse = `
-m - ***a** 
-("this is me")
-mohammed"
-{samir}
-`;
-console.log('logging from ./demos/1 .../script.js', 'color:red')
-console.log('Parsing: "' + valueTOparse + '"');
-console.time('parsing time');
-p.__clonedStr = valueTOparse; p.__realpos = 0; // this is temp, no need for it
-let a = p.__processBlocks(valueTOparse, p.options, operations);
-console.timeEnd('parsing time');
-console.log('afterParsing', a);
-console.log('operations', operations);
+function PARSE(valueTOparse) {
+   // console.log('logging from ./demos/1 .../script.js');
+   let operations = [];
+   console.log('Parsing: \n---------\n' + valueTOparse);
+   console.time('parsing time');
+   let a = p.parse(valueTOparse, operations);
+   console.timeEnd('parsing time');
+   console.log('afterParsing', a);
+   console.log('operations', operations);
+   
+}
+
+
+PARSE(valueTOparse);

@@ -7,8 +7,6 @@ export class commonOperator {
       options = options || {};
       options = { zIndex: 0, ...options }; // overriding default options by the passed options (options argument)
       Object.assign(this, options);
-      // this.name = options.name;
-      // this.zIndex = options.zIndex;
    }
    get name() {
       return this._name;
@@ -31,21 +29,13 @@ export class commonOperator {
 
    }
 
-   __getRegexExp(forceSpaced) {
-      let reg = [
-         '\s*.*',
-         '',
-      ];
-
-      let spaced = forceSpaced ? { right: true, left: true } : this.spaced;
-      let r = spaced.right ? '\\s' : '';
-      let l = spaced.left ? '\\s' : '';
-
-      let regex = new RegExp(`\^(.*)(${l + operator.regex + r})(.*)\$`);
-
-      return regex;
+   get spaced() {
+      return this._spaced;
    }
-
+   set spaced(val) {
+      this._spaced = typeof val === 'object' ? Object.assign({}, val) : {right: val, left: val};
+   }
+   
    toString() {
       return this._name;
    }

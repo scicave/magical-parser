@@ -30,8 +30,8 @@ export default new Map([
          //    'sqrt', 'sin', 'sum', 'integral', 'derivative', 'in'
          // ],
 
-         vars: [], /// to be used in this case ::: ' 1 + var(2-5)' which is the same as ' 1+ var*(2-5)'
-
+         autoMultSign: true,
+         scope: [], /// to be used in this case ::: ' 1 + var(2-5)' which is the same as ' 1+ var*(2-5)'
          prefixOperators: [
             new prefixOperator({ name: '!' }),
             new prefixOperator({ name: 'not' }),
@@ -46,7 +46,7 @@ export default new Map([
          suffixOperators: [
             new suffixOperator({ name: '!' }),
             new suffixOperator({ name: '++' }),
-            new suffixOperator({ name: '--' })
+            new suffixOperator({ name: '--' }),
          ],
 
          operators: [
@@ -87,8 +87,8 @@ export default new Map([
          ],
 
          separators: [
+            new separator({ name: ';' }),
             new separator({ name: ',' }),
-            new separator({ name: ';' })
          ],
 
          blocks: [
@@ -97,9 +97,9 @@ export default new Map([
             new block({ openingChar: '(', closingChar: ')', num: 0, opened: false }),
             new block({ openingChar: '"', closingChar: '"', num: 0, opened: false }),
             new block({ openingChar: "'", closingChar: "'", num: 0, opened: false })
-         ], 
+         ],
 
-         forbiddenSymbols: []
+         forbiddenChars: []
       }
    ]
 
