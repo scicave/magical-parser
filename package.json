@@ -1,7 +1,7 @@
 {
-  "name": "Parser",
+  "name": "magical-parser",
   "version": "1.0.0",
-  "description": "Parser for programming languages, used to analyze their structures, axiomatically you can use it to parse math expressions.",
+  "description": "Parser for programming languages, used to analyze their structures, axiomatically you can use it to parse math expressions.\n Morevoer you can create your own structure to parse your text.",
   "main": "./src/index.js",
   "scripts": {
     "webpack": "./node_modules/.bin/webpack"
@@ -14,7 +14,8 @@
     "parser",
     "math-parser",
     "math",
-    "text-analysis"
+    "text-analysis",
+    "tokenizer"
   ],
   "author": {
     "name": "Mohammed Samir",

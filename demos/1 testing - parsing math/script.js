@@ -6,11 +6,11 @@ var p = new Parser('math', {
    autoMultSign: true,
 });
 
-let valueTOparse = `m*s^num++-3!(1+2)`;
+let valueTOparse = `m*s^num++-3!(1+2)$`;
 
 function PARSE(valueTOparse) {
    // console.log('logging from ./demos/1 .../script.js');
-   let operations = [];
+   let operations = new Map();
    console.log('Parsing: \n---------\n' + valueTOparse);
    console.time('parsing time');
    let a = p.parse(valueTOparse, operations);

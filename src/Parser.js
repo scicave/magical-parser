@@ -11,9 +11,9 @@ import environments from './environments.js';
 import sNode from './sNode.js';
 import { repRegSpecialChars, checker, sendError } from './global.js';
 import { commonOperator, operator, separator, prefixOperator, suffixOperator } from './operators.js';
-export default class Parser{
+export default class Parser {
 
-   constructor(env = 'math', options = {}){
+   constructor(env = 'math', options = {}) {
       this.setEnvironment(env, options);
       this.__randomNameNum = 0;
       this.__realPos = 0;
@@ -28,7 +28,7 @@ export default class Parser{
    }
    setEnvironment(env, options) {
       this._environment = env;
-      
+
       this._options = {
          nameTest: '[_a-zA-Z]+\\d*',
          scope: [],
@@ -41,7 +41,7 @@ export default class Parser{
          ...environments.get(env)
       };
 
-      if (options) 
+      if (options)
          this.options = options; /// adjustments and computations will occur here
    }
 
@@ -51,7 +51,7 @@ export default class Parser{
    set options(options) {
 
       options = Object.assign(this._options, options); /// make this._options a reference for options
-      
+
       //#region 
 
       //#region all
@@ -69,12 +69,12 @@ export default class Parser{
                let op = arr[i];
                let repeated = false;
                _all.replace(new RegExp(` \\(@(${op.regex}),#(\\d*)\\) `), (match, opName, opIndex) => {
-                  Object.assign(arr[i], arr[parseInt(opIndex)]); // merging the repeat
+                  Object.assign(arr[i], arr[parseInt(opIndex)]); // merging the repeated operators
                   arr.splice(parseInt(opIndex), 1); // removing the previous operator wiht the same name
                   repeated = true;
                   return ` (@${op.toString()},#${i}) `;
                });
-               if(!repeated) _all += `(@${op.toString()},#${i}) `;
+               if (!repeated) _all += `(@${op.toString()},#${i}) `;
             }
             return _all;
          }
@@ -87,7 +87,7 @@ export default class Parser{
       options.all = all;
 
       //#endregion
-      
+
       // sort the array to be inversely according to zIndex property.
       if (options.operators)
          options.operators = options.operators.sort(function (a, b) {
@@ -98,7 +98,7 @@ export default class Parser{
          values: options.blocks,
          openedBlock: null
       };
- 
+
       //#endregion
    }
 
@@ -154,7 +154,7 @@ export default class Parser{
          case 'prefixOperators':
             all = this.options.all.prefixOperators;
             arr = this.options.prefixOperators;
-         break;
+            break;
          case 'suffixOperators':
             all = this.options.all.suffixOperators;
             arr = this.options.suffixOperators;
@@ -179,19 +179,19 @@ export default class Parser{
     * @param {object} options if you want to override the aleardy existing options
     * @param {array} operations 
     */
-   parse(str, operations = null) { 
+   parse(str, operations = null) {
 
       var options = this.options;
       var forbiddenChars = options.forbiddenChars;
       var snode;
 
-      operations = operations || new Map();  
-      this.__clonedStr = str; this.__realPos = 0; 
+      operations = operations || new Map();
+      this.__clonedStr = str; this.__realPos = 0;
 
       //#region pre codes
 
       // checking errors
-      for (let i = 0; i < forbiddenChars.length; i++){
+      for (let i = 0; i < forbiddenChars.length; i++) {
          if (this.__contains(str, forbiddenChars[i])) this.__sendError('forbidden char ' + forbiddenChars[i]);
       }
 
@@ -199,7 +199,8 @@ export default class Parser{
          /// var( => var*( /// -.023 var => -.023 var /// -564.012345(...) => -564.012345*(...)
          str = str.replace(new RegExp('((?:-?\\d+\\.?\\d*)|(?:-?\\d*\\.?\\d+))\\s*(\\(|' + options.nameTest + ')', 'g'), '$1 * $2');
          str = str.replace(new RegExp(`(${options.nameTest})\\s*\\(`, 'g'), (match, g) => {
-            if (options.scope.find(a => a === g)) { return g + ' * ('; }
+            if (options.vars.find(a => a === g)) { return g + ' * ('; }
+            else { return match; }
          });
       }
 
@@ -208,93 +209,72 @@ export default class Parser{
          snode = new sNode('');
       }); if (snode) return snode;
 
-      str = this.__processBlocks(str, operations);
+      str = this.__parseBlocks(str, operations);
 
       // after processing brackets, search for functions
       str = str.replace(new RegExp(`(${options.nameTest})\\s*(##${options.nameTest}##)`, 'g'), (match, name, args) => {
-         let _args = operations.get(args);
-         if (args.sNode.calls('()')) {
-            let sn = new sNode('implementFunction', _args.sNode.args, { name });
+         if (options.all.prefixOperators.search(new RegExp(` \\(@(${name}),#(\\d*)\\) `)) > -1) {
+            let _arg = operations.get(args);
+            let sn = new sNode('prefixOperator', _arg, { name });
             operations.set(name, sn);
-         } 
+         } else {
+            let _args = operations.get(args);
+            if (args.sNode.calls('()')) {
+               let sn = new sNode('implementFunction', _args.sNode.args, { name });
+               operations.set(name, sn);
+            }
+         }
          return name; /// replace "name  ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
       });
 
-      str = this.__prepareOpertors(str, operations);
-      
+      str = this.__parseOpertors(str, operations);
+
       //#endregion
+
+      this.__parse(str, options, operations, { parseBlocks: false, parseOperators: false });
+
+   }
+   __parse(str, options, operations, subOptions = {}) {
+
+      subOptions = { parseBlocks: true, parseOperators: true, ...subOptions }; /// or use Object.assign
+      let snode;
+
+      if (subOptions.parseBLocks) {
+         str = this.__parseBlocks(str, operations);
+      }
+      if (subOptions.parseOperators) {
+         str = this.__parseBlocks(str, operations);
+      }
 
       //#region final codes
 
-      // now We have our brackets stored in operations by their names and replaced their blocks with their names.
+      // if empty of characters
+      str.replace(/^\s*$/, () => {
+         snode = new sNode('');
+      }); if (snode) return snode;
 
-      // for (let s of options.separators) {
-      //    if (this.__contains(str, s.name)) {
-      //       let args = [];
-      //       let strs = str.split(s.name);
-      //       for (let str_ of strs) {
-      //          args.push(stringTOsnode(str_, options, operations));
-      //       }
-      //       return new sNode('separator', args, { name: s.name, length: args.length });
-      //    }
-      // }
-
-      // // functions are declared here to avoid creating such a massive memory allocate for each loop inside for
-      // let _op = ''; // helper variable
-      // let _replace = (match, arg1, op, arg2) => {
-      //    let name = this.__getRandomName();
-      //    let sn = new sNode('operator', [stringTOsnode(arg1, options, operations), stringTOsnode(arg2, options, operations)], { name: _op.toString() });
-      //    operations.push({ name: name, sNode: sn });
-      //    return name;
-      // };
-      
-
-      // for (let op of operators) {
-      //    if (this.__contains(str, op.name)) {
-      //       let regex = this.__getRegexExp(op, true);
-      //       _op = op;
-      //       str = str.replace(regex, _replace);
-      //    }
-      // }
-
-   
-
-      // if function like sin#asd123, notice that #asd123 was the bracket (...)
-      str.replace(/^\s*([_a-zA-z]+\d*)\s*(\$\$[_a-zA-z]+\d*\$\$)\s*$/, (match, funcName, funcArgs) => {
-         if (match) {
-            let args = operations.get(funcArgs);
-            if (args.sNode.calls('()')) {
-               snode = new sNode('func', args.sNode.args, { name: funcName });
-            }
-         }
-      });
-      if (snode) return snode;
 
       // if name of operation
-      str.replace(/^\s*(\$\$[_a-zA-z]+\d*\$\$)\s*$/, (match, opName) => {
-         if (match) {
-            snode = operations.get(opName).sNode;
-         }
+      str.replace(new RegExp(`^\\s*(##${options.nameTest}##)\\s*$`), (match, opName) => {
+         snode = operations.get(opName).sNode;
       });
       if (snode) return snode;
 
-      // something.func
-      str.replace(/^\s*(.*)\.(([_a-zA-z]+\d*)\s*(\$\$[_a-zA-z]+\d*\$\$))\s*$/, (match, first, a, funcName, funcArgs) => {
-         if (match) {
-            let args = operations.get(funcArgs);
-            let func;
-            if (args.sNode.calls('()')) {
-               func = new sNode('func', args.sNode.args, { name: funcName });
-            }
-            if (func) {
-               snode = new sNode('.', [this.parse(first, operations), func], { dotType: 'func', extension: first + `.${funcName}` });
-            }
+      // something.abc.funcName(arg1, ...)
+      str.replace(new RegExp(`^\\s*(.*)\\.(?:(${options.nameTest})\\s*(##${options.nameTest}##))\\s*$`), (match, pathTOme, funcName, funcArgs) => {
+         let args = operations.get(funcArgs);
+         let func;
+         if (args.sNode.calls('()')) {
+            func = new sNode('func', args.sNode.args, { name: funcName }); // args.sNode.args the args of the bracket  it may be one or more;
          }
-      })
+         if (func) {
+            snode = new sNode('.', [this.parse(first, operations), func], { dotType: 'func', extension: first + `.${funcName}` });
+         }
+      });
       if (snode) return snode;
 
       //something.id
-      str.replace(/^\s*(.*)\.(\$\$[_a-zA-z]+\d*\$\$)\s*$/, (match, first, id) => {
+      str.replace(/^\s*(.*)\.(\$\$[_a-zA-z]+\d*\$\$)\s*$/, (match, pathTOme, id) => {
          if (match) {
             snode = new sNode('.', [this.parse(first, operations), new sNode('id', [], {
                name: id
@@ -303,62 +283,61 @@ export default class Parser{
                extension: match
             });
          }
-      })
+      });
       if (snode) return snode;
 
       // if literal, number or variable or bool {true or false}, ...
+
       str.replace(/^\s*(([_a-zA-z]+)\d*)\s*$/, (match, value, notNum) => {
          if (match) {
             snode = new sNode(notNum ? 'id' : 'num', [], { value: value });
          }
-      })
+      });
       if (snode) return snode;
+
       str.replace(/^(-?\d+\.?\d*)|(-?\d*\.?\d+)$/, (match, value, notNum) => {
          if (match) {
             snode = new sNode(notNum ? 'id' : 'num', [], { value: value });
          }
-      })
+      });
       if (snode) return snode;
-
-   
 
       throw new Error('invalid script.\n' + str); // this shouldn't happen in ordinary cases, but this line of code is here for avoiding any flaw out of measurements
 
       //#endregion
 
    }
-
    //#region helper funcs
-   __processBlocks(str, operations) {
-      
+   __parseBlocks(str, options, operations) {
+
       //#region brackets
       var that = this;
-      var blocks = this.options.blocks;
+      var blocks = options.blocks;
 
-      let __processBlock__ = function(index, str_) {
+      let __parseBlock__ = (index, str_) => {
          //// checking error,,, this ill be done on handling bracket's content, so don't do for this. 
          let name = that.__getRandomName();
-         
+
          // let str_ = str.slice(index.opening, index.closing); /// cut the text from the next sibiling of the opening char until the current closingChar index
          let b = blocks.openedBlock.ref;
          let searchingTxt = b.openingChar + str_ + b.closingChar;
-         str = str.replace(new RegExp(repRegSpecialChars(searchingTxt), 'g'), name); // if the replacement is global or not, there will no be any problem.
-         
+         str = str.replace(new RegExp(repRegSpecialChars(searchingTxt)), name); // if the replacement is global or not, there will no be any problem unless the developer using this library set a block with the same features as the bolck of our operation name.
+
          let snChild;
-         if (b.handleContent) {                  
-            snChild = that.parse(str_, operations); /// here you are parsing new string with no operations yet. /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
+         if (b.handleContent) {
+            snChild = that.parse(str_); /// here you are parsing new string with no operations yet. /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
          } else {
-            snChild = new sNode('undefined', [], {content: str_}); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
+            snChild = new sNode('undefined', [], { content: str_ }); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
          }
-         let sn = new sNode('block', [snChild], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.name});
+         let sn = new sNode('block', [snChild], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.name });
          operations.set(name, sn);
-         
+
          b.opened = false; blocks.openedBlock = null; // reset
 
          return index.closing + (name.length - searchingTxt.length); /// new_i /// setting the index, as the string may shrink or be taller, it depends on the length of the name
       };
 
-      let __processBlocks__ = function(i_intial = 0) {
+      let __parseBlocks__ = (i_intial = 0) => {
          let __incre = 0; // it is used when a openingChar is found to move the index to exceed the hole opening char, it is needed for opening char more than letter 
          for (let i = i_intial; i < str.length; i++) {
             i += __incre;
@@ -372,9 +351,9 @@ export default class Parser{
 
                         let iof = options.blocks.openedBlock.ref.openingChar.indexOf(b.openingChar);
                         if (iof > -1) {
-                           // this.options.blocks.openedBlock.ref.openingChar  contains  b.closingChar::: for example *** contains **, you can use these blocks formatting typing, **Mohammed** will be bold.
+                           // options.blocks.openedBlock.ref.openingChar  contains  b.closingChar::: for example *** contains **, you can use these blocks formatting typing, **Mohammed** will be bold.
                            options.blocks.openedBlock.mayCloseAt = { ref: b, index: i, iof };
-                        } else { 
+                        } else {
                            b.num--;
                         }
 
@@ -397,7 +376,7 @@ export default class Parser{
                      b.num--;
                   }
                }
-            
+
                /// when a bracket is close, but not opened. e.g. ::: " 1+2-5) "
                if (b.num < 0) {
                   if (b.mustOpen) {
@@ -415,7 +394,7 @@ export default class Parser{
                   };
                   let _str = str.slice(index.opening, index.closing);
                   if (checker.check(_str, b.contentTest)) {
-                     i = __processBlock__(index, _str); /// __processBlock__ returns the new_i
+                     i = __parseBlock__(index, _str); /// __parseBlock__ returns the new_i
                   } else {
                      b.num++; // the considered closingChar found is not compatible, so continue shearching for another closing char
                   }
@@ -423,50 +402,52 @@ export default class Parser{
             }
          }
       };
-      __processBlocks__(0);
+      __parseBlocks__();
       /// after finishing looping searching for brackets blocks, oooops, what is this?!!!, oh, the bracket is not closed. send an error
       if (blocks.openedBlock) {
-         if(blocks.openedBlock.mayCloseAt){
+         if (blocks.openedBlock.mayCloseAt) {
             let index = {
 
                opening:
                   blocks.openedBlock.index +
                   // blocks.openedBlock.mayCloseAt.ref.openingChar.length +    this will be added later
                   blocks.openedBlock.mayCloseAt.iof,
-               
+
                closing: blocks.openedBlock.mayCloseAt.index
-               
+
             };
             /// the openingChar can be for another block e.g.::: (( and (,when we close with )) the blocks is ((content)), otherwise if we close with ) our block is (content) and the second "(" is the first char in the content 
             blocks.openedBlock.ref.opened = false;
             blocks.openedBlock.ref.num = 0;
-            blocks.openedBlock = { ref: blocks.openedBlock.mayCloseAt.ref, index: index.opening};
-            index.opening += blocks.openedBlock.ref.openingChar.length;
+            blocks.openedBlock = { ref: blocks.openedBlock.mayCloseAt.ref, index: index.opening };
+            index.opening += blocks.openedBlock.mayCloseAt.ref.openingChar.length;
 
             let _str = str.slice(index.opening, index.closing);
+            this.__realPos = str.length - 1 - index.closing;
             let new_i;
             if (checker.check(_str, blocks.openedBlock.mayCloseAt.ref.contentTest)) {
-               new_i = __processBlock__(index, _str); /// __processBlock__ returns the new_i
-               
-               this.__realPos = str.length - 1 - index.closing;
-               __processBlocks__(new_i);
+               new_i = __parseBlock__(index, _str); /// __parseBlock__ returns the new_i
+               __parseBlocks__(new_i);
             } else {
-               if (blocks.openedBlock.ref.mustClose) { 
+               if (blocks.openedBlock.ref.mustClose) {
                   this.__sendError('block is not closed.', this.__realPos);
                }
                // the considered closingChar found is not compatible as content failed at the test, so continue shearching for another closing char
                // so start just after the openingChar of the openedBlock.ref,,, 
                // new_i = index.opening;
                this.__realPos -= _str.length;
-               __processBlocks__(index.opening);
+               __parseBlocks__(index.opening);
             }
 
          } else {
             if (blocks.openedBlock.ref.mustClose) {
                this.__sendError('block is not closed.', this.__realPos);
             } else {
+               let new_i = blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length;
+               this.__realPos -= (str.length - 1) - new_i;
                blocks.openedBlock.ref.opened = false;
                blocks.openedBlock = null;
+               __parseBlocks__(new_i);
             }
          }
       }
@@ -476,52 +457,36 @@ export default class Parser{
       return str;
 
    }
-   __prepareOpertors(str, operations) {
+   __parseOpertors(str, option, operations) {
       let _str = str;
-      let arr = [];
-      while (_str) {
-         let a = _str;
-         _str = _str.replace(new RegExp(`^(.*?)(((?:${this.options.nameTest})|((?:\\d+\\.?\\d*)|(?:\\d*\\.?\\d+))))`), (match, g1, g2) => {
-            arr.push(g1);
-            arr.push(g2);
-            return '';
-         });
-         _str = _str.replace(new RegExp(`^(.*?)(##(?:${this.options.nameTest})##)`), (match, g1, g2) => {
-            arr.push(g1);
-            arr.push(g2);
-            return '';
-         });
-         if (a === _str || _str === '') { /// no change (replacement)
-            arr.push(a);
-            _str = null;
-         }
-      }
-      
-      //#region build new str
+      for (let op of options.operators) {
+         let index = _str.search();
+         _str.replace(op.searchingRegex, (match, ) => {
 
-      console.log(arr);
+         });
+      }
 
       //#endregion
 
       return str;
    }
-   __getRandomName () {
+   __getRandomName() {
       let num = 0;
       /// randomNameNum is here to avoid getting the same random name if the code is implemented so fast
       return "##" +
-            (Date.now() + this.__randomNameNum++).toString(36)
-               .replace(new RegExp(num++, 'g'), 'a') /// Ia ma using Regex for global replacement.
-               .replace(new RegExp(num++, 'g'), 'b')
-               .replace(new RegExp(num++, 'g'), 'c')
-               .replace(new RegExp(num++, 'g'), 'd')
-               .replace(new RegExp(num++, 'g'), 'e')
-               .replace(new RegExp(num++, 'g'), 'f')
-               .replace(new RegExp(num++, 'g'), 'g')
-               .replace(new RegExp(num++, 'g'), 'h')
-               .replace(new RegExp(num++, 'g'), 'i')
-               .replace(new RegExp(num++, 'g'), 'j') + 
-            '##';
-   } 
+         (Date.now() + this.__randomNameNum++).toString(36)
+            .replace(new RegExp(num++, 'g'), 'a') /// Ia ma using Regex for global replacement.
+            .replace(new RegExp(num++, 'g'), 'b')
+            .replace(new RegExp(num++, 'g'), 'c')
+            .replace(new RegExp(num++, 'g'), 'd')
+            .replace(new RegExp(num++, 'g'), 'e')
+            .replace(new RegExp(num++, 'g'), 'f')
+            .replace(new RegExp(num++, 'g'), 'g')
+            .replace(new RegExp(num++, 'g'), 'h')
+            .replace(new RegExp(num++, 'g'), 'i')
+            .replace(new RegExp(num++, 'g'), 'j') +
+         '##';
+   }
    __sendError(msg, pos, str) {
       str = str || this.__clonedStr;
       pos = pos || this.__realPos;
