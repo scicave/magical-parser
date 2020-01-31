@@ -261,14 +261,13 @@ export default class Parser {
       if (snode) return snode;
 
       // something.abc.funcName(arg1, ...)
-      str.replace(new RegExp(`^\\s*(.*)\\.(?:(${options.nameTest})\\s*(##${options.nameTest}##))\\s*$`), (match, pathTOme, funcName, funcArgs) => {
+      str.replace(new RegExp(`^\\s*(${options.nameTest}\\s*\\.\\s*)+(?:(${options.nameTest})\\s*(##${options.nameTest}##))\\s*$`), (match, pathTOme, funcName, funcArgs) => {
          let args = operations.get(funcArgs);
-         let func;
          if (args.sNode.calls('()')) {
-            func = new sNode('func', args.sNode.args, { name: funcName }); // args.sNode.args the args of the bracket  it may be one or more;
-         }
-         if (func) {
-            snode = new sNode('.', [this.parse(first, operations), func], { dotType: 'func', extension: first + `.${funcName}` });
+            let func;
+            let extension = this.parse(pathTOme, operations);
+            func = new sNode('implementFunction', args.sNode.args, { name: funcName }); // args.sNode.args the args of the bracket  it may be one or more;
+            snode = new sNode('.', [extension, func], { dotType: 'function', fullName: pathTOme + funcName });
          }
       });
       if (snode) return snode;
