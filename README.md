@@ -8,10 +8,10 @@ We are still working in this library (repo), please help us to continue coding. 
 [PATREON](https://www.patreon.com/ms2052001/).
 
 # Contribute
-This is an open-source library, do hessitate to enrich the open-source community, help othr developer, we should keep the needle moving.
+This is an open-source library, don't hessitate to enrich the open-source community, help other developers, we should keep the needle moving, make sure your contribution is well integrated and tested carefully, ❤️️.
 
 # Math expressions
-Use this to parse mathematical expressions with an extesive options to set
+You can use our lovely library to parse mathematical expressions with an extesive options to set.
 ### Code:
 ``` javascript
 
