@@ -4,13 +4,16 @@
  * options include:
  * functions:: if is is applied the expr " 1 + rg(2)" will be considered as " 1 + rg*(2)", thus rg is constants, here we sill consider the functions you insert in addtion to the common functions such as ['sin', 'cos', ...]
  *
+ * operators search regex at regexr.com "https://regexr.com/4tbfe"
+
  */
 
 // import sNode from './sNode';
 import environments from './environments.js';
 import sNode from './sNode.js';
-import { repRegSpecialChars, checker, sendError } from './global.js';
-import { commonOperator, operator, separator, prefixOperator, suffixOperator } from './operators.js';
+import { checker, sendError, prepareOptions, getRandomName, contains } from './global.js';
+import { operator, separator, prefixOperator, suffixOperator } from './operators.js';
+
 export default class Parser {
 
    constructor(env = 'math', options = {}) {
@@ -20,6 +23,7 @@ export default class Parser {
    }
 
    //#region getter, setter
+
    get environment() {
       return this._environment;
    }
@@ -49,81 +53,30 @@ export default class Parser {
       return this._options;
    }
    set options(options) {
-
       options = Object.assign(this._options, options); /// make this._options a reference for options
-
-      //#region 
-
-      //#region all
-
-      let all = {
-         operators: ' ',
-         prefixOperators: ' ',
-         suffixOperators: ' ',
-      };
-
-      let processArr = (arr) => {
-         if (arr && arr.length > 0) {
-            let _all = ' ';
-            for (let i = 0; i < arr.length; i++) {
-               let op = arr[i];
-               let repeated = false;
-               _all.replace(new RegExp(` \\(@(${op.regex}),#(\\d*)\\) `), (match, opName, opIndex) => {
-                  Object.assign(arr[i], arr[parseInt(opIndex)]); // merging the repeated operators
-                  arr.splice(parseInt(opIndex), 1); // removing the previous operator wiht the same name
-                  repeated = true;
-                  return ` (@${op.toString()},#${i}) `;
-               });
-               if (!repeated) _all += `(@${op.toString()},#${i}) `;
-            }
-            return _all;
-         }
-      };
-
-      all.operators = processArr(options.operators);
-      all.prefixOperators = processArr(options.prefixOperators);
-      all.suffixOperators = processArr(options.suffixOperators);
-
-      options.all = all;
-
-      //#endregion
-
-      // sort the array to be inversely according to zIndex property.
-      if (options.operators)
-         options.operators = options.operators.sort(function (a, b) {
-            return -(a.zIndex - b.zIndex); // the negative sign is for reverse the array;
-         });
-
-      options.blocks = {
-         values: options.blocks,
-         openedBlock: null
-      };
-
-      //#endregion
+      prepareOptions(options);
    }
 
-   setOperator(op) {
-      let all;
-      let arr;
-      if (op instanceof operator) {
-         all = this.options.all.operators;
-         arr = this.operators;
+   setOperator(op, type) {
+      if (!type) {
+         if (op instanceof operator) {
+            type = 'operators';
+         }
+         else if (op instanceof suffixOperator) {
+            type = 'suffixOperator';
+         }
+         else if (op instanceof prefixOperator) {
+            type = 'prefixOperator';
+         }
+         else if (op instanceof separator) {
+            type = 'separator';
+         } else {
+            return undefined;
+         }
       }
-      else if (op instanceof suffixOperator) {
-         all = this.options.all.suffixOperators;
-         arr = this.suffixOperators;
-      }
-      else if (op instanceof prefixOperator) {
-         all = this.options.all.prefixOperators;
-         arr = this.prefixOperators;
-      }
-      else if (op instanceof separator) {
-         all = this.options.all.separators;
-         arr = this.separators;
-      }
-
-      let found = false;
-      all.replace(new RegExp(` \\(@(${op.regex}),#(\\d*)\\) `), (match, name, index) => {
+      let found = false,
+         arr = this.options[type];
+      this.options.all[type] = this.options.all[type].replace(new RegExp(` \\(@(${op.regex}),#(\\d*)\\) `), (match, name, index) => {
          // you are trying to add a n already existed operator,
          found = true;
          Object.assign(op, arr[parseInt(index)]);
@@ -133,40 +86,13 @@ export default class Parser {
       });
       if (!found) {
          arr.push(op);
-         if (op instanceof operator) {
-            this.options.all.operators += `(@${op.name},#${arr.length}) `;
-         } else if (op instanceof suffixOperator) {
-            this.options.all.suffixOperators += `(@${op.name},#${arr.length}) `;
-         } else if (op instanceof prefixOperator) {
-            this.options.all.prefixOperators += `(@${op.name},#${arr.length}) `;
-         } else if (op instanceof separator) {
-            this.options.all.separators += `(@${op.name},#${arr.length}) `;
-         }
+         this.options.all[type] += `(@${op.name},#${arr.length}) `;
       }
    }
    removeOperator(name, type) {
-      let all, arr;
-      switch (type) {
-         case 'operators':
-            all = this.options.all.operators;
-            arr = this.options.operators;
-            break;
-         case 'prefixOperators':
-            all = this.options.all.prefixOperators;
-            arr = this.options.prefixOperators;
-            break;
-         case 'suffixOperators':
-            all = this.options.all.suffixOperators;
-            arr = this.options.suffixOperators;
-            break;
-         case 'separators':
-            all = this.options.all.separators;
-            arr = this.options.separators;
-            break;
-      }
-      all.replace(new RegExp(` \\(@(${name}),#(\\d*)\\) `), (match, name, index) => {
+      this.options.all[type] = this.options.all[type].replace(new RegExp(` \\(@(${name}),#(\\d*)\\) `), (match, name, index) => {
          // you are trying to add a n already existed operator,
-         arr.splice(parseInt(index), 1);
+         this.options[type].splice(parseInt(index), 1);
          return ``;
       });
    }
@@ -185,27 +111,26 @@ export default class Parser {
       var forbiddenChars = options.forbiddenChars;
       var snode;
 
-      operations = operations || new Map();
+      operations = operations instanceof Map ? operations : new Map();
       this.__clonedStr = str; this.__realPos = 0;
 
       //#region pre codes
 
       // checking errors
       for (let i = 0; i < forbiddenChars.length; i++) {
-         if (this.__contains(str, forbiddenChars[i])) this.__sendError('forbidden char ' + forbiddenChars[i]);
+         if (contains(str, forbiddenChars[i])) sendError('forbidden char ' + forbiddenChars[i]);
       }
 
-      if (this.autoMultSign) {
+      if (options.autoMultSign) {
          /// var( => var*( /// -.023 var => -.023 var /// -564.012345(...) => -564.012345*(...)
          str = str.replace(new RegExp('((?:-?\\d+\\.?\\d*)|(?:-?\\d*\\.?\\d+))\\s*(\\(|' + options.nameTest + ')', 'g'), '$1 * $2');
-         str = str.replace(new RegExp(`(${options.nameTest})\\s*\\(`, 'g'), (match, g) => {
-            if (options.vars.find(a => a === g)) { return g + ' * ('; }
-            else { return match; }
-         });
+         /// the code beneath will be exuted in replacing funcName##funcArgsName## with funcName##funcArgsName##
+         // str = str.replace(new RegExp(`(${options.nameTest})\\s*\\(`, 'g'), (match, g) => {
+         // });
       }
 
       // if empty of characters
-      str.replace(/^\s*$/, () => {
+      str = str.replace(/^\s*$/, () => {
          snode = new sNode('');
       }); if (snode) return snode;
 
@@ -214,17 +139,26 @@ export default class Parser {
       // after processing brackets, search for functions
       str = str.replace(new RegExp(`(${options.nameTest})\\s*(##${options.nameTest}##)`, 'g'), (match, name, args) => {
          if (options.all.prefixOperators.search(new RegExp(` \\(@(${name}),#(\\d*)\\) `)) > -1) {
-            let _arg = operations.get(args);
-            let sn = new sNode('prefixOperator', _arg, { name });
-            operations.set(name, sn);
+            // let _arg = operations.get(args);
+            // let sn = new sNode('prefixOperator', _arg, { name });
+            // operations.set(name, sn);
+            return match;
          } else {
             let _args = operations.get(args);
-            if (args.sNode.calls('()')) {
-               let sn = new sNode('implementFunction', _args.sNode.args, { name });
-               operations.set(name, sn);
+            if (_args.calls('()')) {
+               if (options.vars.find(a => a === name)) {
+                  let sn = new sNode('operator', [new sNode('var', [], { name }), _args], { name: '*' });
+                  operations.set(args, sn);
+                  return name + ' * ' + args;
+               }
+
+               let sn = new sNode('implementFunction', _args.args, { name });
+               operations.set(args, sn);
+               return args; /// replace "name  ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
+            } else {
+               return match;
             }
          }
-         return name; /// replace "name  ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
       });
 
       str = this.__parseOpertors(str, operations);
@@ -249,21 +183,26 @@ export default class Parser {
       //#region final codes
 
       // if empty of characters
-      str.replace(/^\s*$/, () => {
+      str = str.replace(/^\s*$/, () => {
          snode = new sNode('');
       }); if (snode) return snode;
 
 
       // if name of operation
-      str.replace(new RegExp(`^\\s*(##${options.nameTest}##)\\s*$`), (match, opName) => {
+      str = str.replace(new RegExp(`^\\s*(##${options.nameTest}##)\\s*$`), (match, opName) => {
          snode = operations.get(opName).sNode;
       });
       if (snode) return snode;
 
       // something.abc.funcName(arg1, ...)
-      str.replace(new RegExp(`^\\s*(${options.nameTest}\\s*\\.\\s*)+(?:(${options.nameTest})\\s*(##${options.nameTest}##))\\s*$`), (match, pathTOme, funcName, funcArgs) => {
+      str = str.replace(new RegExp(`^\\s*(${options.nameTest}\\s*\\.\\s*)+(?:(${options.nameTest})\\s*(##${options.nameTest}##))\\s*$`), (match, pathTOme, funcName, funcArgs) => {
          let args = operations.get(funcArgs);
-         if (args.sNode.calls('()')) {
+         if (options.all.prefixOperators.search(new RegExp(` \\(@(${name}),#(\\d*)\\) `)) > -1) {
+            let _arg = operations.get(args);
+            let sn = new sNode('prefixOperator', _arg, { name });
+            operations.set(name, sn);
+         }
+         else if (args.sNode.calls('()')) {
             let func;
             let extension = this.parse(pathTOme, operations);
             func = new sNode('implementFunction', args.sNode.args, { name: funcName }); // args.sNode.args the args of the bracket  it may be one or more;
@@ -273,7 +212,7 @@ export default class Parser {
       if (snode) return snode;
 
       //something.id
-      str.replace(/^\s*(.*)\.(\$\$[_a-zA-z]+\d*\$\$)\s*$/, (match, pathTOme, id) => {
+      str = str.replace(/^\s*(.*)\.(\$\$[_a-zA-z]+\d*\$\$)\s*$/, (match, pathTOme, id) => {
          if (match) {
             snode = new sNode('.', [this.parse(first, operations), new sNode('id', [], {
                name: id
@@ -287,14 +226,14 @@ export default class Parser {
 
       // if literal, number or variable or bool {true or false}, ...
 
-      str.replace(/^\s*(([_a-zA-z]+)\d*)\s*$/, (match, value, notNum) => {
+      str = str.replace(/^\s*(([_a-zA-z]+)\d*)\s*$/, (match, value, notNum) => {
          if (match) {
             snode = new sNode(notNum ? 'id' : 'num', [], { value: value });
          }
       });
       if (snode) return snode;
 
-      str.replace(/^(-?\d+\.?\d*)|(-?\d*\.?\d+)$/, (match, value, notNum) => {
+      str = str.replace(/^(-?\d+\.?\d*)|(-?\d*\.?\d+)$/, (match, value, notNum) => {
          if (match) {
             snode = new sNode(notNum ? 'id' : 'num', [], { value: value });
          }
@@ -306,7 +245,6 @@ export default class Parser {
       //#endregion
 
    }
-   //#region helper funcs
    __parseBlocks(str, options, operations) {
 
       //#region brackets
@@ -315,12 +253,12 @@ export default class Parser {
 
       let __parseBlock__ = (index, str_) => {
          //// checking error,,, this ill be done on handling bracket's content, so don't do for this. 
-         let name = that.__getRandomName();
+         let name = getRandomName();
 
          // let str_ = str.slice(index.opening, index.closing); /// cut the text from the next sibiling of the opening char until the current closingChar index
          let b = blocks.openedBlock.ref;
          let searchingTxt = b.openingChar + str_ + b.closingChar;
-         str = str.replace(new RegExp(repRegSpecialChars(searchingTxt)), name); // if the replacement is global or not, there will no be any problem unless the developer using this library set a block with the same features as the bolck of our operation name.
+         str = str.replace(searchingTxt, name); // if the replacement is global or not, there will no be any problem unless the developer using this library set a block with the same features as the bolck of our operation name.
 
          let snChild;
          if (b.handleContent) {
@@ -337,11 +275,8 @@ export default class Parser {
       };
 
       let __parseBlocks__ = (i_intial = 0) => {
-         let __incre = 0; // it is used when a openingChar is found to move the index to exceed the hole opening char, it is needed for opening char more than letter 
          for (let i = i_intial; i < str.length; i++) {
-            i += __incre;
-            __incre = 0;
-            if (that.__realPos || that.__realPos === 0) that.__realPos += 1 + __incre; // dealing with the intial str be fore the parsing process
+            if (this.__realPos || this.__realPos === 0) this.__realPos += 1; // dealing with the intial str be fore the parsing process
             for (let b of blocks.values) {
                /// if a block is opened, closing has the priority, unless, opening has the priority::: you can notice this in ***Mohammed***, if you check the opening char first the num will increase to 2, thus the block will not be closed,,, and an error will occur.
                if (blocks.openedBlock) {
@@ -361,12 +296,14 @@ export default class Parser {
                      }
                   } else if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
                      b.num++;
-                     __incre = b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+                     i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+                     this.__realPos += b.openingChar.length - 1;
                   }
                } else {
                   if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
                      b.num++;
-                     __incre = b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+                     i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+                     this.__realPos += b.openingChar.length - 1;
                      // if (!blocks.openedBlock) { /// if not open, then open
                      b.opened = true;
                      blocks.openedBlock = { ref: b, index: i };
@@ -379,7 +316,7 @@ export default class Parser {
                /// when a bracket is close, but not opened. e.g. ::: " 1+2-5) "
                if (b.num < 0) {
                   if (b.mustOpen) {
-                     that.__sendError('closing a block not opened.');
+                     sendError('closing a block not opened.');
                   } else {
                      b.num = 0;
                   }
@@ -429,7 +366,7 @@ export default class Parser {
                __parseBlocks__(new_i);
             } else {
                if (blocks.openedBlock.ref.mustClose) {
-                  this.__sendError('block is not closed.', this.__realPos);
+                  sendError('block is not closed.', this.__realPos);
                }
                // the considered closingChar found is not compatible as content failed at the test, so continue shearching for another closing char
                // so start just after the openingChar of the openedBlock.ref,,, 
@@ -440,7 +377,7 @@ export default class Parser {
 
          } else {
             if (blocks.openedBlock.ref.mustClose) {
-               this.__sendError('block is not closed.', this.__realPos);
+               sendError('block is not closed.', this.__realPos);
             } else {
                let new_i = blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length;
                this.__realPos -= (str.length - 1) - new_i;
@@ -456,41 +393,265 @@ export default class Parser {
       return str;
 
    }
-   __parseOpertors(str, option, operations) {
-      let _str = str;
-      for (let op of options.operators) {
-         let index = _str.search();
-         _str.replace(op.searchingRegex, (match, ) => {
+   __parseOperators(str, options, operations) {
+      /// RegExp: (var or num or block)(suffix)(op)(prefix)(var or num or block)
+      /// ((?:[a-zA-Z_]+\d*)|(?:-?\d+\.?\d*)|(?:-?\d*\.?\d+))\s*((?:\+\+))?\s*((?:\+))\s*((?:\+\+|\+|\-))?\s*((?:[a-zA-Z_]+\d*)|(?:\d+\.?\d*)|(?:\d*\.?\d+))
+
+      //#region separators
+      //if (!_contains(str, ...operators)) str = str.replace(/\s/g, '');
+      for (let s of options.separators) {
+         if (new RegExp(s.regex).test(str)) {
+            let name = this.__get;
+            let args = [];
+            let strs = str.split(s);
+            for (let str_ of strs) {
+               args.push(this.parse(str_, operations));
+            }
+            operations.set(name, new sNode('separator', args, { name: s, length: args.length }));
+         }
+      }
+      //#endregion
+
+      //#region preparing ofr parsing process
+      let argTest = `${options.nameTest}|${options.numTest}|##${options.nameTest}##`;
+      let search = new RegExp(`^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${argTest})\\s*`),
+         intialSearch = new RegExp(`^\\s*(${options.allRegex.prefixOperators})?\\s*(${argTest})`),
+         finalSearch = new RegExp(`^\\s*(${options.allRegex.suffixOperators})\\s*$`);
+
+      let _str = '',
+         prevArg = {
+            name: null,
+            sn: null
+         };
+      //#endregion
+
+      //#region searchong for operators and parsing process
+      /// intial replacement
+      str = str.replace(intialSearch, (match, prefix, arg) => {
+         if (prefix) {
+            let a = arg,
+               b = 'prefixOperator',
+               c = prefix;
+            if (!isNaN(a)) {
+               /// number
+               let name = getRandomName();
+               let sn = new sNode(
+                  b,
+                  new sNode('number', [], { value: parseInt(a) }),
+                  { name: c }
+               );
+               operations.set(name, sn);
+               prevArg = { name, sn };
+            } else {
+               let found = false;
+               a.replace(`##${options.nameTest}##`, () => {
+                  found = true;
+               });
+               if (found) {
+                  /// operations
+                  let sn = new sNode(
+                     b,
+                     operations.get(a), /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
+                     { name: c }
+                  );
+                  operations.set(a, sn);
+                  prevArg.sn = { name: a, sn };
+               } else {
+                  /// varName
+                  let name = getRandomName();
+                  let sn = new sNode(
+                     b,
+                     new sNode('variable', [], { name: a }),
+                     { name: c }
+                  );
+                  operations.set(name, sn);
+                  prevArg = { name, sn };
+               }
+            }
+
+         } else {
+            let found = false;
+            arg.replace(`##${options.nameTest}##`, () => {
+               found = true;
+            });
+            if (found) {
+               prevArg = { name: arg, sn: operations.get(arg) };
+            } else {
+               prevArg = { name: arg };
+            }
+         }
+
+         return '';
+      });
+      let a;
+      while (a !== str) {
+         a = str;
+         /// if replacement is not implemented, str will sstill the same and while loop will close
+         str = str.replace(search, (match, suffix, op, prefix, arg) => {
+
+            if (!op) {
+               sendError('operators', 'invalid operators', str, null);
+            }
+
+            if (suffix) {
+               for (let i = 0; i < options.suffixOperators.length; i++) {
+                  if (options.suffixOperators[i].regex.test(suffix)) {
+                     /// creating an operations with type of  prefix operator,,, its arg is the prev arg
+                     let a = prevArg.name,
+                        b = 'suffixOperator',
+                        c = suffix;
+                     if (!isNaN(a)) {
+                        /// number
+                        let name = getRandomName();
+                        let sn = new sNode(
+                           b,
+                           new sNode('number', [], { value: parseInt(a) }),
+                           { name: c }
+                        );
+                        operations.set(name, sn);
+                        prevArg = { name, sn };
+                     } else {
+                        let found = false;
+                        a.replace(`##${options.nameTest}##`, () => {
+                           found = true;
+                        });
+                        if (found) {
+                           /// operations
+                           let sn = new sNode(
+                              b,
+                              prevArg.sn, /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
+                              { name: c }
+                           );
+                           operations.set(a, sn);
+                           prevArg.sn = sn;
+                        } else {
+                           /// varName
+                           let name = getRandomName();
+                           let sn = new sNode(
+                              b,
+                              new sNode('variable', [], { name: a }),
+                              { name: c }
+                           );
+                           operations.set(name, sn);
+                           prevArg = { name, sn };
+                        }
+                     }
+                  }
+               }
+            }
+
+            _str += prevArg.name + ' ' + op + ' ';
+
+            if (prefix) {
+               let a = arg,
+                  b = 'prefixOperator',
+                  c = prefix;
+               if (!isNaN(a)) {
+                  /// number
+                  let name = getRandomName();
+                  let sn = new sNode(
+                     b,
+                     new sNode('number', [], { value: parseInt(a) }),
+                     { name: c }
+                  );
+                  operations.set(name, sn);
+                  prevArg = { name, sn };
+               } else {
+                  let found = false;
+                  a.replace(`##${options.nameTest}##`, () => {
+                     found = true;
+                  });
+                  if (found) {
+                     /// operations
+                     let sn = new sNode(
+                        b,
+                        operations.get(a), /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
+                        { name: c }
+                     );
+                     operations.set(a, sn);
+                     prevArg.sn = { name: a, sn };
+                  } else {
+                     /// varName
+                     let name = getRandomName();
+                     let sn = new sNode(
+                        b,
+                        new sNode('variable', [], { name: a }),
+                        { name: c }
+                     );
+                     operations.set(name, sn);
+                     prevArg = { name, sn };
+                  }
+               }
+            } else {
+               let found = false;
+               arg.replace(`##${options.nameTest}##`, () => {
+                  found = true;
+               });
+               if (found) {
+                  prevArg = { name: arg, sn: operations.get(arg) };
+               } else {
+                  prevArg = { name: arg };
+               }
+            }
+
+            return '';
 
          });
       }
+      // final search
+      if (str !== '') {
+         str = str.replace(finalSearch, (match, suffix) => {
 
+            let a = prevArg.name,
+               b = 'suffixOperator',
+               c = suffix;
+            if (!isNaN(a)) {
+               /// number
+               let name = getRandomName();
+               let sn = new sNode(
+                  b,
+                  new sNode('number', [], { value: parseInt(a) }),
+                  { name: c }
+               );
+               operations.set(name, sn);
+               prevArg = { name, sn };
+            } else {
+               let found = false;
+               a.replace(`##${options.nameTest}##`, () => {
+                  found = true;
+               });
+               if (found) {
+                  /// operations
+                  let sn = new sNode(
+                     b,
+                     prevArg.sn, /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
+                     { name: c }
+                  );
+                  operations.set(a, sn);
+                  prevArg.sn = { name: a, sn };
+               } else {
+                  /// varName
+                  let name = getRandomName();
+                  let sn = new sNode(
+                     b,
+                     new sNode('variable', [], { name: a }),
+                     { name: c }
+                  );
+                  operations.set(name, sn);
+                  prevArg = { name, sn };
+               }
+            }
+
+            _str += prevArg.name;
+
+            return '';
+
+         });
+         if (str !== '') sendError('operators', 'invalid suffix operator at the end', '', null);
+      }
       //#endregion
 
-      return str;
+      return _str;
    }
-   __getRandomName() {
-      let num = 0;
-      /// randomNameNum is here to avoid getting the same random name if the code is implemented so fast
-      return "##" +
-         (Date.now() + this.__randomNameNum++).toString(36)
-            .replace(new RegExp(num++, 'g'), 'a') /// Ia ma using Regex for global replacement.
-            .replace(new RegExp(num++, 'g'), 'b')
-            .replace(new RegExp(num++, 'g'), 'c')
-            .replace(new RegExp(num++, 'g'), 'd')
-            .replace(new RegExp(num++, 'g'), 'e')
-            .replace(new RegExp(num++, 'g'), 'f')
-            .replace(new RegExp(num++, 'g'), 'g')
-            .replace(new RegExp(num++, 'g'), 'h')
-            .replace(new RegExp(num++, 'g'), 'i')
-            .replace(new RegExp(num++, 'g'), 'j') +
-         '##';
-   }
-   __sendError(msg, pos, str) {
-      str = str || this.__clonedStr;
-      pos = pos || this.__realPos;
-      sendError(msg + ' realpos: ' + this.__realPos, str, pos);
-   }
-   //#endregion
 
 }

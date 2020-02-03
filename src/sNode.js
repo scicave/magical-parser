@@ -15,26 +15,27 @@ export default class sNode {
     */
    constructor(type, args = [], attributes = {}) {
       Object.assign(this, attributes);
-      if (type === 'op') {
-         let boolOps = ['and', 'or', 'xor', 'not', '&&', '||', '!'];
-         if (this.__contains(this.name, ...boolOps)) {
-            this.type = 'bool_op';
-         }
-         else if (this.name == ' ==') {
-            this.type = 'assign_op';
-         }
-         else {
-            this.type = type;
-         }
-      } else {
-         this.type = type;
-      }
-      this.args = args;
-      if (this.type === 'id') {
-         if (this.name === 'true' || this.name === 'false') {
-            this.type = 'bool';
-         }
-      }
+      this.args = args instanceof Array ? args : [args];
+      this.type = type;
+      // if (type === 'op') {
+      //    let boolOps = ['and', 'or', 'xor', 'not', '&&', '||', '!'];
+      //    if (this.__contains(this.name, ...boolOps)) {
+      //       this.type = 'bool_op';
+      //    }
+      //    else if (this.name == ' ==') {
+      //       this.type = 'assign_op';
+      //    }
+      //    else {
+      //       this.type = type;
+      //    }
+      // } else {
+      //    this.type = type;
+      // }
+      // if (this.type === 'id') {
+      //    if (this.name === 'true' || this.name === 'false') {
+      //       this.type = 'bool';
+      //    }
+      // }
    }
 
    get isLiteral() {

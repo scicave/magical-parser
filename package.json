@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/scicave/Parser.git"
+    "url": "git+https://github.com/scicave/magical-parser.git"
   },
   "keywords": [
     "parser",
@@ -23,9 +23,9 @@
   },
   "license": "Apache",
   "bugs": {
-    "url": "https://github.com/scicave/Parser/issues"
+    "url": "https://github.com/scicave/magical-parser/issues"
   },
-  "homepage": "https://github.com/scicave/Parser#readme",
+  "homepage": "https://github.com/scicave/magical-parser#readme",
   "devDependencies": {
     "@babel/core": "^7.8.3",
     "@babel/preset-env": "^7.8.3",

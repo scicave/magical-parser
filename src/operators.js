@@ -1,5 +1,5 @@
 
-import { strTOreg, checker } from './global.js';
+import { regSpecialChars, checker } from './global.js';
 
 
 export class commonOperator {
@@ -8,23 +8,27 @@ export class commonOperator {
       options = { zIndex: 0, ...options }; // overriding default options by the passed options (options argument)
       Object.assign(this, options);
    }
-   get name() {
-      return this._name;
+   get id() {
+      return this._id;
    }
-   set name(val) {
+   set id(val) {
 
-      if (!val || val === '') throw new Error('operator name can not be void or empty');
+      if (!val || val === '') throw new Error('operator id can not be void or empty');
 
-      this._name = val.toString();
+      this._id = val;
 
       // preparing regex for parsing process
-      this.regex = strTOreg(this._name); // replacing special chars
+      if (val instanceof RegExp) {
+         this.regexStr = val.toString().slice(1, -1); // replacing special chars         
+      } else {
+         this.regexStr = regSpecialChars(val.toString()); // replacing special chars         
+      }
 
       // spaced property
 
       this.spaced = {
-         right: checker.spaced(val[0]),
-         left: checker.spaced(val[val.toString().length - 1])
+         right: checker.spaced(val[val.toString().length - 1]),
+         left: checker.spaced(val[0])
       };
 
    }
@@ -33,11 +37,11 @@ export class commonOperator {
       return this._spaced;
    }
    set spaced(val) {
-      this._spaced = typeof val === 'object' ? Object.assign({}, val) : {right: val, left: val};
+      this._spaced = typeof val === 'object' ? Object.assign({}, val) : { right: val, left: val };
    }
-   
+
    toString() {
-      return this._name;
+      return this.regexStr;
    }
 }
 
