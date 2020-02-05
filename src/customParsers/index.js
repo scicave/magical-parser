@@ -1,4 +1,6 @@
-import Math from './math.js';
+import Math from './Math.js';
+import ProgMath from './ProgMath.js';
+
 
 export default {
    Math,

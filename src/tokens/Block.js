@@ -1,9 +1,9 @@
 
 // for exmaple brackets and quotations
-//{ openingChar: '{', closingChar: '}', num: 0, opened: false }
-import { regSpecialChars } from './global.js';
+//{ opening: '{', closing: '}', num: 0, opened: false }
+import { regSpecialChars } from '../global.js';
 
-export default class block {
+export default class Block {
 
    constructor(options = {}) {
       options = {
@@ -25,16 +25,16 @@ export default class block {
          this.regexStr = val.toString().slice(1, -1);
       } else if (val instanceof Object) {
          this._id = val;
-         if (val.openingChar && val.closingChar) {
-            val.contentTest = val.contentTest || 'all';
-            if (val.contentTest instanceof RegExp) {
-               val.contentTest = val.contentTest.toString().slice(1, -1);
-            } else if (val.contentTest === 'all') {
-               val.contentTest = '.*?';
+         if (val.opening && val.closing) {
+            val.content = val.content || 'all';
+            if (val.content instanceof RegExp) {
+               val.content = val.content.toString().slice(1, -1);
+            } else if (val.content === 'all') {
+               val.content = '.*?';
             } else {
-               val.contentTest = regSpecialChars(val.contentTest);
+               val.content = regSpecialChars(val.content);
             }
-            this.regexStr = `${regSpecialChars(val.openingChar)}(${val.contentTest})${regSpecialChars(val.closingChar)}`;
+            this.regexStr = `${regSpecialChars(val.opening)}(${val.content})${regSpecialChars(val.closing)}`;
             this.regex = new RegExp(this.regexStr);
          }
       } else {
@@ -44,10 +44,11 @@ export default class block {
       }
    }
 
-   get contentTest() {
+   get content() {
       return this._contentTest || 'all';
    }
-   set contentTest(val) {
+   set content(val) {
       this._contentTest = val;
    }
+
 }

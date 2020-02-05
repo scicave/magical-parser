@@ -1,8 +1,12 @@
 
-import { regSpecialChars, checker } from './global.js';
+import { regSpecialChars, checker } from '../global.js';
 
 
 export class commonOperator {
+   /**
+    * 
+    * @param {Object} options id as regex or string, zIndex for priority 
+    */
    constructor(options) {
       options = options || {};
       options = { zIndex: 0, ...options }; // overriding default options by the passed options (options argument)
@@ -46,25 +50,25 @@ export class commonOperator {
    }
 }
 
-export class operator extends commonOperator {
+export class Operator extends commonOperator {
    constructor(options) {
       super(options);
    }
 }
 
-export class suffixOperator extends commonOperator {
+export class SuffixOperator extends commonOperator {
    constructor(options) {
       super(options);
    }
 }
 
-export class prefixOperator extends commonOperator {
+export class PrefixOperator extends commonOperator {
    constructor(options) {
       super(options);
    }
 }
 
-export class separator extends commonOperator {
+export class Separator extends commonOperator {
    constructor(options) {
       super(options);
    }

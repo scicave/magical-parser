@@ -1,7 +1,7 @@
-import { operator, separator, prefixOperator, suffixOperator } from '../operators.js';
-import block from '../blocks.js';
+import { Operator, Separator, PrefixOperator, SuffixOperator } from '../tokens/Operators.js';
+import Block from '../tokens/Block.js/index.js';
 import Node from '../Node.js';
-import { prepareOptions, sendError, contains, getRandomName, operatorsSplitChar } from '../global.js';
+import { prepareOptions, sendError, contains, getRandomName } from '../global.js';
 
 export default class CustomMathParser {
 
@@ -13,63 +13,63 @@ export default class CustomMathParser {
          numTest: '\\d+\\.?\\d*|\\d*\\.?\\d+',
 
          prefixOperators: [
-            new prefixOperator({ id: '+' }),
-            new prefixOperator({ id: '-' }),
+            new PrefixOperator({ id: '+' }),
+            new PrefixOperator({ id: '-' }),
          ],
 
          suffixOperators: [
-            new suffixOperator({ id: '!' }),
-            new suffixOperator({ id: 'deg' }),
-            new suffixOperator({ id: 'rad' }),
+            new SuffixOperator({ id: '!' }),
+            new SuffixOperator({ id: 'deg' }),
+            new SuffixOperator({ id: 'rad' }),
          ],
 
          operators: [
 
-            new operator({ id: '^', zIndex: 10 }), // the first operator to process
-            new operator({ id: '*', zIndex: 9 }),
-            new operator({ id: '/', zIndex: 9 }),
-            new operator({ id: 'mod', zIndex: 9 }),
-            new operator({ id: '+', zIndex: 7 }),
-            new operator({ id: '-', zIndex: 7 }),
-            new operator({ id: '>>', zIndex: 6 }),
-            new operator({ id: '<<', zIndex: 6 }),
-            new operator({ id: '>=', zIndex: 5 }),
-            new operator({ id: '<=', zIndex: 5 }),
-            new operator({ id: '!=', zIndex: 5 }),
-            new operator({ id: '<', zIndex: 5 }),
-            new operator({ id: '>', zIndex: 5 }),
-            new operator({ id: '==', zIndex: 5 }),
-            new operator({ id: '&', zIndex: 4 }),
-            new operator({ id: 'band', zIndex: 4 }),
-            new operator({ id: '|', zIndex: 4 }),
-            new operator({ id: 'bor', zIndex: 4 }),
-            new operator({ id: 'bxor', zIndex: 4 }),
-            new operator({ id: 'constrain', zIndex: 4 }),
-            new operator({ id: 'in', zIndex: 3 }),
-            new operator({ id: 'out', zIndex: 3 }),
-            new operator({ id: 'xnor', zIndex: 1 }),
-            new operator({ id: 'xor', zIndex: 1 }),
-            new operator({ id: 'nand', zIndex: 1 }),
-            new operator({ id: 'nor', zIndex: 1 }),
-            new operator({ id: 'or', zIndex: 1 }),
-            new operator({ id: 'and', zIndex: 1 }),
-            new operator({ id: '||', zIndex: 1 }),
-            new operator({ id: '&&', zIndex: 1 }),
-            new operator({ id: '=', zIndex: 0 }) // the last operator to be applied
+            new Operator({ id: '^', zIndex: 10 }), // the first operator to process
+            new Operator({ id: '*', zIndex: 9 }),
+            new Operator({ id: '/', zIndex: 9 }),
+            new Operator({ id: 'mod', zIndex: 9 }),
+            new Operator({ id: '+', zIndex: 7 }),
+            new Operator({ id: '-', zIndex: 7 }),
+            new Operator({ id: '>>', zIndex: 6 }),
+            new Operator({ id: '<<', zIndex: 6 }),
+            new Operator({ id: '>=', zIndex: 5 }),
+            new Operator({ id: '<=', zIndex: 5 }),
+            new Operator({ id: '!=', zIndex: 5 }),
+            new Operator({ id: '<', zIndex: 5 }),
+            new Operator({ id: '>', zIndex: 5 }),
+            new Operator({ id: '==', zIndex: 5 }),
+            new Operator({ id: '&', zIndex: 4 }),
+            new Operator({ id: 'band', zIndex: 4 }),
+            new Operator({ id: '|', zIndex: 4 }),
+            new Operator({ id: 'bor', zIndex: 4 }),
+            new Operator({ id: 'bxor', zIndex: 4 }),
+            new Operator({ id: 'constrain', zIndex: 4 }),
+            new Operator({ id: 'in', zIndex: 3 }),
+            new Operator({ id: 'out', zIndex: 3 }),
+            new Operator({ id: 'xnor', zIndex: 1 }),
+            new Operator({ id: 'xor', zIndex: 1 }),
+            new Operator({ id: 'nand', zIndex: 1 }),
+            new Operator({ id: 'nor', zIndex: 1 }),
+            new Operator({ id: 'or', zIndex: 1 }),
+            new Operator({ id: 'and', zIndex: 1 }),
+            new Operator({ id: '||', zIndex: 1 }),
+            new Operator({ id: '&&', zIndex: 1 }),
+            new Operator({ id: '=', zIndex: 0 }) // the last operator to be applied
 
          ],
 
          separators: [
-            new separator({ id: ';' }),
-            new separator({ id: ',' }),
+            new Separator({ id: ';' }),
+            new Separator({ id: ',' }),
          ],
 
          blocks: [
-            new block({ id: { openingChar: '{', closingChar: '}' } }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
-            new block({ id: { openingChar: '[', closingChar: ']' } }),
-            new block({ id: { openingChar: '(', closingChar: ')' } }),
-            new block({ id: { openingChar: '"', closingChar: '"' } }),
-            new block({ id: { openingChar: "'", closingChar: "'" } })
+            new Block({ id: { openingChar: '{', closingChar: '}' } }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
+            new Block({ id: { openingChar: '[', closingChar: ']' } }),
+            new Block({ id: { openingChar: '(', closingChar: ')' } }),
+            new Block({ id: { openingChar: '"', closingChar: '"' } }),
+            new Block({ id: { openingChar: "'", closingChar: "'" } })
          ],
 
          forbiddenChars: [],

@@ -15,11 +15,11 @@ const mode = 'development';
 const date = new Date();
 const banner = `
 ${pkg.name} v${pkg.version}       ${date}
-by ${pkg.author instanceof Object ? pkg.author.name + '       ' + pkg.author.email : pkg.author }
-${ pkg.homepage || '' }
+by ${pkg.author instanceof Object ? pkg.author.name + '       ' + pkg.author.email : pkg.author}
+${ pkg.homepage || ''}
 
-Copyright: ${ date.getFullYear() } NTNU;
-License: ${ pkg.license }
+Copyright: ${ date.getFullYear()} NTNU;
+License: ${ pkg.license}
 
 Build: [hash]
    `;
@@ -69,7 +69,7 @@ function getOutput(options) {
 }
 function createConfig(options) {
 
-   var entry = "./src/index.js";
+   var entry = "./build/index.js";
 
    var output = getOutput(options);
 

@@ -6,6 +6,7 @@
 */
 
 export default class Node {
+
    /**
     * @param {string} type is a on of these
     *  'id', 'func', 'num', 'bool_op', 'binray_op', 'bool', op = {'+', '-', '*', '/', '^', '=', ...}
