@@ -7,7 +7,7 @@ const path = require("path");
 //#region for config
 
 const pkg = require('./package.json');
-const productName = pkg.name;
+const productName = 'MagicalParser'; /// the global name for your integrated module
 const mode = 'development';
 
 //#region banner
@@ -15,14 +15,14 @@ const mode = 'development';
 const date = new Date();
 const banner = `
 ${pkg.name} v${pkg.version}       ${date}
-by ${pkg.author.name}    ${pkg.author.email}
-${pkg.homepage}
+by ${pkg.author instanceof Object ? pkg.author.name + '       ' + pkg.author.email : pkg.author }
+${ pkg.homepage || '' }
 
-Copyright: ${date.getFullYear()} NTNU
-License: ${pkg.license}
+Copyright: ${ date.getFullYear() } NTNU;
+License: ${ pkg.license }
 
 Build: [hash]
-`;
+   `;
 //#endregion
 
 //#endregion
@@ -45,28 +45,28 @@ function getFileExtension(libraryTarget) {
    return fileExtention;
 }
 
-var getOutput = (options) => {
-      var fileExtention = getFileExtension(options.libraryTarget);
+function getOutput(options) {
+   var fileExtention = getFileExtension(options.libraryTarget);
 
-      if (options.libraryTarget === 'umd') {
-         return {
-            path: path.resolve(__dirname, "lib"),
-            filename: productName + ".js",
-            library: productName,
-            libraryTarget: 'umd'
-         };
-      }
-      else {
-         return {
-            path: path.resolve(__dirname, "lib"),
-            filename: productName + '.' + fileExtention + '.js',
-            libraryExport: 'default',
-            libraryTarget: options.libraryTarget,
-            umdNamedDefine: true,
-            globalObject: `(typeof self !== 'undefined' ? self : this)`
-         };
-      }
-};
+   if (options.libraryTarget === 'umd') {
+      return {
+         path: path.resolve(__dirname, "lib"),
+         filename: productName + ".js",
+         library: productName,
+         libraryTarget: 'umd'
+      };
+   }
+   else {
+      return {
+         path: path.resolve(__dirname, "lib"),
+         filename: productName + '.' + fileExtention + '.js',
+         libraryExport: 'default',
+         libraryTarget: options.libraryTarget,
+         umdNamedDefine: true,
+         globalObject: `(typeof self !== 'undefined' ? self : this)`
+      };
+   }
+}
 function createConfig(options) {
 
    var entry = "./src/index.js";
@@ -111,4 +111,4 @@ if (mode === 'development') {
    module.exports = [...variantsConfig, umdConfig]; /// parallel-webpack creates options for you
 }
 
-//#endregion
+//#endregion;

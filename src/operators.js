@@ -23,6 +23,7 @@ export class commonOperator {
       } else {
          this.regexStr = regSpecialChars(val.toString()); // replacing special chars         
       }
+      this.regex = new RegExp(this.regexStr);
 
       // spaced property
 

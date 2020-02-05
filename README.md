@@ -15,5 +15,19 @@ You can use our lovely library to parse mathematical expressions with an extesiv
 ### Code:
 ``` javascript
 
+const parser = new MagicalParser.CustomParsers.Math();
+
+let input = 'y = (2x)! ^ sin(5rad)';
+
+let output = parser.parse(input);
+
+console.log(output); // expected ouput, tree node starting from the root node as "=" operator contains 2 nodes both has it nodes in args property.
+
+/*
+ you can use the output to create some complicated stuff suhc 
+   1. converte to latex
+   2. calculated this complicated input,
+   3. no limit for application, abilities stop at the end of our imaginations. 
+*/
 ```
 

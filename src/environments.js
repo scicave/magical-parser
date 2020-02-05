@@ -10,6 +10,9 @@ export default new Map([
    [
       'new',
       {
+         nameTest: '[a-zA-Z_]+\\d*',
+         numTest: '\\d+\\.?\\d*|\\d*\\.?\\d+',
+
          operators: [],
          suffixOperators: [],
          prefixOperators: [],
@@ -20,6 +23,9 @@ export default new Map([
    [
       "math",
       {
+         nameTest: '[a-zA-Z_]+\\d*',
+         numTest: '\\d+\\.?\\d*|\\d*\\.?\\d+',
+
          autoMultSign: true,
          vars: [], /// to be used in this case ::: ' 1 + var(2-5)' which is the same as ' 1+ var*(2-5)'
          prefixOperators: [

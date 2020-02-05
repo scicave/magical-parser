@@ -79,8 +79,8 @@ export function sendError(type, msg, str = '', pos = undefined) {
    msg = msg + str + pos;
 
    switch (type) {
-      case 'forbiddenSymbols':
-         throw new Errors.forbiddenSymbolsError(msg);
+      case 'forbiddenChars':
+         throw new Errors.forbiddenCharsError(msg);
       case 'operators':
          throw new Errors.operatorsError(msg);
       case 'blocks':
@@ -93,14 +93,16 @@ export function sendError(type, msg, str = '', pos = undefined) {
 
 export function prepareOptions(options) {
 
+   options.forbiddenChars = [...options.forbiddenChars, ...specialChars];
+
    //#region all
 
    //#region string
 
    let all = {
-      operators: ' ',
-      prefixOperators: ' ',
-      suffixOperators: ' ',
+      operators: '',
+      prefixOperators: '',
+      suffixOperators: '',
    };
 
    let processArr = (arr) => {
@@ -109,13 +111,13 @@ export function prepareOptions(options) {
          for (let i = 0; i < arr.length; i++) {
             let op = arr[i];
             let repeated = false;
-            _all.replace(new RegExp(` \\(@(${op.regexStr}),#(\\d*)\\) `), (match, opName, opIndex) => {
+            _all.replace(new RegExp(`\\(@(${op.regexStr})#(\\d*)\\)`), (match, opName, opIndex) => {
                Object.assign(arr[i], arr[parseInt(opIndex)]); // merging the repeated operators
                arr.splice(parseInt(opIndex), 1); // removing the previous operator wiht the same name
                repeated = true;
                return ` (@${op.toString()},#${i}) `;
             });
-            if (!repeated) _all += `(@${op.toString()},#${i}) `;
+            if (!repeated) _all += `(@${op.regexStr()}#${i})`;
          }
          return _all;
       }
@@ -166,7 +168,7 @@ export function prepareOptions(options) {
    options.numTestReg = new RegExp(options.numTestReg);
    options.argTest = `${options.nameTest}|${options.numTest}|##${options.nameTest}##`;
    options.argTestReg = new RegExp(options.argTestReg);
-   options.operationTest = `##${options.nameTest}##`;
+   options.operationTest = operationBlockChar + options.nameTest + operationBlockChar;
    options.operationTestReg = new RegExp(options.operationTest);
 
    options.opTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`);
@@ -198,7 +200,8 @@ export function contains(str, containedStr) {
 export function getRandomName() {
    let num = 0;
    /// randomNameNum is here to avoid getting the same random name if the code is implemented so fast
-   return "##" +
+
+   return this.operationBlockChar +
       (Date.now() + getRandomName.randomNameNum++).toString(36)
          .replace(new RegExp(num++, 'g'), 'a') /// I am using Regex for global replacement.
          .replace(new RegExp(num++, 'g'), 'b')
@@ -210,6 +213,11 @@ export function getRandomName() {
          .replace(new RegExp(num++, 'g'), 'h')
          .replace(new RegExp(num++, 'g'), 'i')
          .replace(new RegExp(num++, 'g'), 'j') +
-      '##';
+      this.operationBlockChar;
 }
 getRandomName.randomNameNum = 0;
+getRandomName.operationBlockChar = operationBlockChar;
+
+export var operationBlockChar = '¶';
+
+export var specialChars = [operationBlockChar];

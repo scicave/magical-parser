@@ -1,6 +1,6 @@
-import math from './math.js';
+import Math from './math.js';
 
 export default {
-   math,
+   Math,
 
 };

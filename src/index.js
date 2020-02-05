@@ -1,2 +1,7 @@
-import Parser from './Parser.js';
-import customParsers from './customParsers/index.js';
+
+var Parser = require('./Parser').default;
+var CustomParsers = require('./customParsers/index').default;
+
+var MagicalParser = { Parser, CustomParsers };
+
+module.exports = MagicalParser;

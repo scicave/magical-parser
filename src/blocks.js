@@ -1,32 +1,47 @@
 
 // for exmaple brackets and quotations
 //{ openingChar: '{', closingChar: '}', num: 0, opened: false }
-export default class block{
+import { regSpecialChars } from './global.js';
+
+export default class block {
 
    constructor(options = {}) {
-
-      // this.openingChar = options.openingChar;
-      // this.closingChar = options.closingChar;
-      // this.zIndex = options.zIndex;
-      // this.handleContent = options.handleContent;
-      // this.contentTest = options.contentTest;
-      // this.name = options.name;
-      // this.mustClose = options.mustClose;
       options = {
-         mustClose: true,
-         mustOpen: true,
          ...options
       };
       Object.assign(this, options);
 
-      this.opened = false;
-      this.num = 0;
+      // these properties are deprecated and algorithms was enhanced :._.:
+      // this.opened = false; 
+      // this.num = 0;
    }
-   get name() {
-      return this._name || (this.openingChar + this.closingChar);
+   get id() {
+      return this._id;
    }
-   set name(val) {
-      this._name = val;
+   set id(val) {
+      if (val instanceof RegExp) {
+         this._id = val;
+         this.regex = val;
+         this.regexStr = val.toString().slice(1, -1);
+      } else if (val instanceof Object) {
+         this._id = val;
+         if (val.openingChar && val.closingChar) {
+            val.contentTest = val.contentTest || 'all';
+            if (val.contentTest instanceof RegExp) {
+               val.contentTest = val.contentTest.toString().slice(1, -1);
+            } else if (val.contentTest === 'all') {
+               val.contentTest = '.*?';
+            } else {
+               val.contentTest = regSpecialChars(val.contentTest);
+            }
+            this.regexStr = `${regSpecialChars(val.openingChar)}(${val.contentTest})${regSpecialChars(val.closingChar)}`;
+            this.regex = new RegExp(this.regexStr);
+         }
+      } else {
+         this._id = val;
+         this.regex = new RegExp(regSpecialChars(val));
+         this.regexStr = val.toString();
+      }
    }
 
    get contentTest() {

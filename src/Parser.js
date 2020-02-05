@@ -10,7 +10,7 @@
 
 // import sNode from './sNode';
 import environments from './environments.js';
-import sNode from './sNode.js';
+import Node from './Node.js';
 import { checker, sendError, prepareOptions, getRandomName, contains } from './global.js';
 import { operator, separator, prefixOperator, suffixOperator } from './operators.js';
 
@@ -76,24 +76,24 @@ export default class Parser {
       }
       let found = false,
          arr = this.options[type];
-      this.options.all[type] = this.options.all[type].replace(new RegExp(` \\(@(${op.regex}),#(\\d*)\\) `), (match, name, index) => {
+      this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${op.regex})#(\\d*)\\)`), (match, name, index) => {
          // you are trying to add a n already existed operator,
          found = true;
          Object.assign(op, arr[parseInt(index)]);
          arr.splice(parseInt(index), 1);
          arr.push(op);
-         return ` (@${op.regex},#${arr.length}) `;
+         return `(@${op.regex}#${arr.length})`;
       });
       if (!found) {
          arr.push(op);
-         this.options.all[type] += `(@${op.name},#${arr.length}) `;
+         this.options.all[type] += `(@${op.regexStr}#${arr.length})`;
       }
    }
    removeOperator(name, type) {
-      this.options.all[type] = this.options.all[type].replace(new RegExp(` \\(@(${name}),#(\\d*)\\) `), (match, name, index) => {
+      this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${name})#(\\d*)\\)`), (match, name, index) => {
          // you are trying to add a n already existed operator,
          this.options[type].splice(parseInt(index), 1);
-         return ``;
+         return '';
       });
    }
 
@@ -131,7 +131,7 @@ export default class Parser {
 
       // if empty of characters
       str = str.replace(/^\s*$/, () => {
-         snode = new sNode('');
+         snode = new Node('');
       }); if (snode) return snode;
 
       str = this.__parseBlocks(str, operations);
@@ -147,12 +147,12 @@ export default class Parser {
             let _args = operations.get(args);
             if (_args.calls('()')) {
                if (options.vars.find(a => a === name)) {
-                  let sn = new sNode('operator', [new sNode('var', [], { name }), _args], { name: '*' });
+                  let sn = new Node('operator', [new Node('var', [], { name }), _args], { name: '*' });
                   operations.set(args, sn);
                   return name + ' * ' + args;
                }
 
-               let sn = new sNode('implementFunction', _args.args, { name });
+               let sn = new Node('implementFunction', _args.args, { name });
                operations.set(args, sn);
                return args; /// replace "name  ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
             } else {
@@ -184,7 +184,7 @@ export default class Parser {
 
       // if empty of characters
       str = str.replace(/^\s*$/, () => {
-         snode = new sNode('');
+         snode = new Node('');
       }); if (snode) return snode;
 
 
@@ -199,14 +199,14 @@ export default class Parser {
          let args = operations.get(funcArgs);
          if (options.all.prefixOperators.search(new RegExp(` \\(@(${name}),#(\\d*)\\) `)) > -1) {
             let _arg = operations.get(args);
-            let sn = new sNode('prefixOperator', _arg, { name });
+            let sn = new Node('prefixOperator', _arg, { name });
             operations.set(name, sn);
          }
          else if (args.sNode.calls('()')) {
             let func;
             let extension = this.parse(pathTOme, operations);
-            func = new sNode('implementFunction', args.sNode.args, { name: funcName }); // args.sNode.args the args of the bracket  it may be one or more;
-            snode = new sNode('.', [extension, func], { dotType: 'function', fullName: pathTOme + funcName });
+            func = new Node('implementFunction', args.sNode.args, { name: funcName }); // args.sNode.args the args of the bracket  it may be one or more;
+            snode = new Node('.', [extension, func], { dotType: 'function', fullName: pathTOme + funcName });
          }
       });
       if (snode) return snode;
@@ -214,7 +214,7 @@ export default class Parser {
       //something.id
       str = str.replace(/^\s*(.*)\.(\$\$[_a-zA-z]+\d*\$\$)\s*$/, (match, pathTOme, id) => {
          if (match) {
-            snode = new sNode('.', [this.parse(first, operations), new sNode('id', [], {
+            snode = new Node('.', [this.parse(first, operations), new Node('id', [], {
                name: id
             })], {
                dotType: 'id',
@@ -228,14 +228,14 @@ export default class Parser {
 
       str = str.replace(/^\s*(([_a-zA-z]+)\d*)\s*$/, (match, value, notNum) => {
          if (match) {
-            snode = new sNode(notNum ? 'id' : 'num', [], { value: value });
+            snode = new Node(notNum ? 'id' : 'num', [], { value: value });
          }
       });
       if (snode) return snode;
 
       str = str.replace(/^(-?\d+\.?\d*)|(-?\d*\.?\d+)$/, (match, value, notNum) => {
          if (match) {
-            snode = new sNode(notNum ? 'id' : 'num', [], { value: value });
+            snode = new Node(notNum ? 'id' : 'num', [], { value: value });
          }
       });
       if (snode) return snode;
@@ -264,9 +264,9 @@ export default class Parser {
          if (b.handleContent) {
             snChild = that.parse(str_); /// here you are parsing new string with no operations yet. /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
          } else {
-            snChild = new sNode('undefined', [], { content: str_ }); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
+            snChild = new Node('undefined', [], { content: str_ }); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
          }
-         let sn = new sNode('block', [snChild], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.name });
+         let sn = new Node('block', [snChild], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.name });
          operations.set(name, sn);
 
          b.opened = false; blocks.openedBlock = null; // reset
@@ -407,7 +407,7 @@ export default class Parser {
             for (let str_ of strs) {
                args.push(this.parse(str_, operations));
             }
-            operations.set(name, new sNode('separator', args, { name: s, length: args.length }));
+            operations.set(name, new Node('separator', args, { name: s, length: args.length }));
          }
       }
       //#endregion
@@ -435,9 +435,9 @@ export default class Parser {
             if (!isNaN(a)) {
                /// number
                let name = getRandomName();
-               let sn = new sNode(
+               let sn = new Node(
                   b,
-                  new sNode('number', [], { value: parseInt(a) }),
+                  new Node('number', [], { value: parseInt(a) }),
                   { name: c }
                );
                operations.set(name, sn);
@@ -449,7 +449,7 @@ export default class Parser {
                });
                if (found) {
                   /// operations
-                  let sn = new sNode(
+                  let sn = new Node(
                      b,
                      operations.get(a), /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
                      { name: c }
@@ -459,9 +459,9 @@ export default class Parser {
                } else {
                   /// varName
                   let name = getRandomName();
-                  let sn = new sNode(
+                  let sn = new Node(
                      b,
-                     new sNode('variable', [], { name: a }),
+                     new Node('variable', [], { name: a }),
                      { name: c }
                   );
                   operations.set(name, sn);
@@ -503,9 +503,9 @@ export default class Parser {
                      if (!isNaN(a)) {
                         /// number
                         let name = getRandomName();
-                        let sn = new sNode(
+                        let sn = new Node(
                            b,
-                           new sNode('number', [], { value: parseInt(a) }),
+                           new Node('number', [], { value: parseInt(a) }),
                            { name: c }
                         );
                         operations.set(name, sn);
@@ -517,7 +517,7 @@ export default class Parser {
                         });
                         if (found) {
                            /// operations
-                           let sn = new sNode(
+                           let sn = new Node(
                               b,
                               prevArg.sn, /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
                               { name: c }
@@ -527,9 +527,9 @@ export default class Parser {
                         } else {
                            /// varName
                            let name = getRandomName();
-                           let sn = new sNode(
+                           let sn = new Node(
                               b,
-                              new sNode('variable', [], { name: a }),
+                              new Node('variable', [], { name: a }),
                               { name: c }
                            );
                            operations.set(name, sn);
@@ -549,9 +549,9 @@ export default class Parser {
                if (!isNaN(a)) {
                   /// number
                   let name = getRandomName();
-                  let sn = new sNode(
+                  let sn = new Node(
                      b,
-                     new sNode('number', [], { value: parseInt(a) }),
+                     new Node('number', [], { value: parseInt(a) }),
                      { name: c }
                   );
                   operations.set(name, sn);
@@ -563,7 +563,7 @@ export default class Parser {
                   });
                   if (found) {
                      /// operations
-                     let sn = new sNode(
+                     let sn = new Node(
                         b,
                         operations.get(a), /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
                         { name: c }
@@ -573,9 +573,9 @@ export default class Parser {
                   } else {
                      /// varName
                      let name = getRandomName();
-                     let sn = new sNode(
+                     let sn = new Node(
                         b,
-                        new sNode('variable', [], { name: a }),
+                        new Node('variable', [], { name: a }),
                         { name: c }
                      );
                      operations.set(name, sn);
@@ -608,9 +608,9 @@ export default class Parser {
             if (!isNaN(a)) {
                /// number
                let name = getRandomName();
-               let sn = new sNode(
+               let sn = new Node(
                   b,
-                  new sNode('number', [], { value: parseInt(a) }),
+                  new Node('number', [], { value: parseInt(a) }),
                   { name: c }
                );
                operations.set(name, sn);
@@ -622,7 +622,7 @@ export default class Parser {
                });
                if (found) {
                   /// operations
-                  let sn = new sNode(
+                  let sn = new Node(
                      b,
                      prevArg.sn, /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
                      { name: c }
@@ -632,9 +632,9 @@ export default class Parser {
                } else {
                   /// varName
                   let name = getRandomName();
-                  let sn = new sNode(
+                  let sn = new Node(
                      b,
-                     new sNode('variable', [], { name: a }),
+                     new Node('variable', [], { name: a }),
                      { name: c }
                   );
                   operations.set(name, sn);

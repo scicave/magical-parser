@@ -1,12 +1,7 @@
-import CustomMathParser from "../../src/customParsers/math.js";
 // import block from "../../src/blocks.js";
-// import { specialRegex } from '../../src/global.js';
-
-var p = new CustomMathParser('math', {
-   autoMultSign: true,
-});
-
-let valueTOparse = `m = 2*s!^num!`;
+import CustomMathParser from './../../src/customParsers/Math.js';
+// var p = new MagicalParser.CustomParser.Math();
+var p = new CustomMathParser();
 
 function PARSE(valueTOparse) {
    // console.log('logging from ./demos/1 .../script.js');
@@ -24,4 +19,4 @@ function PARSE(valueTOparse) {
    console.log(operations);
 }
 
-PARSE(valueTOparse);
+PARSE('m = sin(2*s)num!');
