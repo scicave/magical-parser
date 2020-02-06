@@ -42,6 +42,8 @@ export default class Block {
          this.regex = new RegExp(regSpecialChars(val));
          this.regexStr = val.toString();
       }
+      // settingthe regex to be global
+      if (!this.regex.global) this.regex = new RegExp(this.regex.source, this.regex.flags + 'g');
    }
 
    get content() {

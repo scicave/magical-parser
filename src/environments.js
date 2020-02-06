@@ -1,6 +1,6 @@
 
 import { Operator, Separator, PrefixOperator, SuffixOperator } from './tokens/Operators.js';
-import block from './tokens/Block.js/index.js';
+import block from './tokens/Block.js';
 
 export default new Map([
    /**

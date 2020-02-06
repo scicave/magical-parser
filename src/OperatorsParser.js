@@ -121,13 +121,13 @@ export default class OperatorsParser {
          if (contains(str, forbiddenChars[i])) sendError('forbidden char ' + forbiddenChars[i]);
       }
 
-      if (options.autoMultSign) {
-         /// var( => var*( /// -.023 var => -.023 var /// -564.012345(...) => -564.012345*(...)
-         str = str.replace(new RegExp('((?:-?\\d+\\.?\\d*)|(?:-?\\d*\\.?\\d+))\\s*(\\(|' + options.nameTest + ')', 'g'), '$1 * $2');
-         /// the code beneath will be exuted in replacing funcName##funcArgsName## with funcName##funcArgsName##
-         // str = str.replace(new RegExp(`(${options.nameTest})\\s*\\(`, 'g'), (match, g) => {
-         // });
-      }
+      // if (options.autoMultSign) {
+      //    /// var( => var*( /// -.023 var => -.023 var /// -564.012345(...) => -564.012345*(...)
+      //    str = str.replace(new RegExp('((?:-?\\d+\\.?\\d*)|(?:-?\\d*\\.?\\d+))\\s*(\\(|' + options.nameTest + ')', 'g'), '$1 * $2');
+      //    /// the code beneath will be exuted in replacing funcName##funcArgsName## with funcName##funcArgsName##
+      //    // str = str.replace(new RegExp(`(${options.nameTest})\\s*\\(`, 'g'), (match, g) => {
+      //    // });
+      // }
 
       // if empty of characters
       str = str.replace(/^\s*$/, () => {
@@ -136,30 +136,30 @@ export default class OperatorsParser {
 
       str = this.__parseBlocks(str, operations);
 
-      // after processing brackets, search for functions
-      str = str.replace(new RegExp(`(${options.nameTest})\\s*(##${options.nameTest}##)`, 'g'), (match, name, args) => {
-         if (options.all.prefixOperators.search(new RegExp(` \\(@(${name}),#(\\d*)\\) `)) > -1) {
-            // let _arg = operations.get(args);
-            // let sn = new sNode('prefixOperator', _arg, { name });
-            // operations.set(name, sn);
-            return match;
-         } else {
-            let _args = operations.get(args);
-            if (_args.calls('()')) {
-               if (options.vars.find(a => a === name)) {
-                  let sn = new Node('operator', [new Node('var', [], { name }), _args], { name: '*' });
-                  operations.set(args, sn);
-                  return name + ' * ' + args;
-               }
+      // // after processing brackets, search for functions
+      // str = str.replace(new RegExp(`(${options.nameTest})\\s*(##${options.nameTest}##)`, 'g'), (match, name, args) => {
+      //    if (options.all.prefixOperators.search(new RegExp(` \\(@(${name}),#(\\d*)\\) `)) > -1) {
+      //       // let _arg = operations.get(args);
+      //       // let sn = new sNode('prefixOperator', _arg, { name });
+      //       // operations.set(name, sn);
+      //       return match;
+      //    } else {
+      //       let _args = operations.get(args);
+      //       if (_args.calls('()')) {
+      //          if (options.vars.find(a => a === name)) {
+      //             let sn = new Node('operator', [new Node('var', [], { name }), _args], { name: '*' });
+      //             operations.set(args, sn);
+      //             return name + ' * ' + args;
+      //          }
 
-               let sn = new Node('implementFunction', _args.args, { name });
-               operations.set(args, sn);
-               return args; /// replace "name  ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
-            } else {
-               return match;
-            }
-         }
-      });
+      //          let sn = new Node('implementFunction', _args.args, { name });
+      //          operations.set(args, sn);
+      //          return args; /// replace "name  ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
+      //       } else {
+      //          return match;
+      //       }
+      //    }
+      // });
 
       str = this.__parseOpertors(str, operations);
 
@@ -245,154 +245,33 @@ export default class OperatorsParser {
       //#endregion
 
    }
+
    __parseBlocks(str, options, operations) {
 
       //#region brackets
-      var that = this;
+
       var blocks = options.blocks;
 
-      let __parseBlock__ = (index, str_) => {
-         //// checking error,,, this ill be done on handling bracket's content, so don't do for this. 
+      let b;
+
+      let repBlock = (match, content) => {
          let name = getRandomName();
-
-         // let str_ = str.slice(index.opening, index.closing); /// cut the text from the next sibiling of the opening char until the current closingChar index
-         let b = blocks.openedBlock.ref;
-         let searchingTxt = b.openingChar + str_ + b.closingChar;
-         str = str.replace(searchingTxt, name); // if the replacement is global or not, there will no be any problem unless the developer using this library set a block with the same features as the bolck of our operation name.
-
-         let snChild;
-         if (b.handleContent) {
-            snChild = that.parse(str_); /// here you are parsing new string with no operations yet. /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
-         } else {
-            snChild = new Node('undefined', [], { content: str_ }); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
-         }
-         let sn = new Node('block', [snChild], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.name });
+         let childArg = b.parser ? b.parser.parse(content) : this.__parse(content, options, operations);
+         let sn = new Node('block', childArg, { id: b.id, tokenRef: b });
          operations.set(name, sn);
-
-         b.opened = false; blocks.openedBlock = null; // reset
-
-         return index.closing + (name.length - searchingTxt.length); /// new_i /// setting the index, as the string may shrink or be taller, it depends on the length of the name
+         return name;
       };
 
-      let __parseBlocks__ = (i_intial = 0) => {
-         for (let i = i_intial; i < str.length; i++) {
-            if (this.__realPos || this.__realPos === 0) this.__realPos += 1; // dealing with the intial str be fore the parsing process
-            for (let b of blocks.values) {
-               /// if a block is opened, closing has the priority, unless, opening has the priority::: you can notice this in ***Mohammed***, if you check the opening char first the num will increase to 2, thus the block will not be closed,,, and an error will occur.
-               if (blocks.openedBlock) {
-                  if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
-                     if (b !== options.blocks.openedBlock.ref) {
-
-                        let iof = options.blocks.openedBlock.ref.openingChar.indexOf(b.openingChar);
-                        if (iof > -1) {
-                           // options.blocks.openedBlock.ref.openingChar  contains  b.closingChar::: for example *** contains **, you can use these blocks formatting typing, **Mohammed** will be bold.
-                           options.blocks.openedBlock.mayCloseAt = { ref: b, index: i, iof };
-                        } else {
-                           b.num--;
-                        }
-
-                     } else {
-                        b.num--;
-                     }
-                  } else if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
-                     b.num++;
-                     i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
-                     this.__realPos += b.openingChar.length - 1;
-                  }
-               } else {
-                  if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
-                     b.num++;
-                     i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
-                     this.__realPos += b.openingChar.length - 1;
-                     // if (!blocks.openedBlock) { /// if not open, then open
-                     b.opened = true;
-                     blocks.openedBlock = { ref: b, index: i };
-                     // }
-                  } else if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
-                     b.num--;
-                  }
-               }
-
-               /// when a bracket is close, but not opened. e.g. ::: " 1+2-5) "
-               if (b.num < 0) {
-                  if (b.mustOpen) {
-                     sendError('closing a block not opened.');
-                  } else {
-                     b.num = 0;
-                  }
-               }
-
-               /// if true, the bracket's block is defined.
-               if (b.num === 0 && b.opened) { /// may other brackets' num be zero, as it does not exist or as it is closed but it closed inside the block that we are setting,,, e.g.::: " 1+2({1,2,3}^-1) "
-                  let index = {
-                     opening: blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length,
-                     closing: i
-                  };
-                  let _str = str.slice(index.opening, index.closing);
-                  if (checker.check(_str, b.content)) {
-                     i = __parseBlock__(index, _str); /// __parseBlock__ returns the new_i
-                  } else {
-                     b.num++; // the considered closingChar found is not compatible, so continue shearching for another closing char
-                  }
-               }
-            }
-         }
-      };
-      __parseBlocks__();
-      /// after finishing looping searching for brackets blocks, oooops, what is this?!!!, oh, the bracket is not closed. send an error
-      if (blocks.openedBlock) {
-         if (blocks.openedBlock.mayCloseAt) {
-            let index = {
-
-               opening:
-                  blocks.openedBlock.index +
-                  // blocks.openedBlock.mayCloseAt.ref.openingChar.length +    this will be added later
-                  blocks.openedBlock.mayCloseAt.iof,
-
-               closing: blocks.openedBlock.mayCloseAt.index
-
-            };
-            /// the openingChar can be for another block e.g.::: (( and (,when we close with )) the blocks is ((content)), otherwise if we close with ) our block is (content) and the second "(" is the first char in the content 
-            blocks.openedBlock.ref.opened = false;
-            blocks.openedBlock.ref.num = 0;
-            blocks.openedBlock = { ref: blocks.openedBlock.mayCloseAt.ref, index: index.opening };
-            index.opening += blocks.openedBlock.mayCloseAt.ref.openingChar.length;
-
-            let _str = str.slice(index.opening, index.closing);
-            this.__realPos = str.length - 1 - index.closing;
-            let new_i;
-            if (checker.check(_str, blocks.openedBlock.mayCloseAt.ref.content)) {
-               new_i = __parseBlock__(index, _str); /// __parseBlock__ returns the new_i
-               __parseBlocks__(new_i);
-            } else {
-               if (blocks.openedBlock.ref.mustClose) {
-                  sendError('block is not closed.', this.__realPos);
-               }
-               // the considered closingChar found is not compatible as content failed at the test, so continue shearching for another closing char
-               // so start just after the openingChar of the openedBlock.ref,,, 
-               // new_i = index.opening;
-               this.__realPos -= _str.length;
-               __parseBlocks__(index.opening);
-            }
-
-         } else {
-            if (blocks.openedBlock.ref.mustClose) {
-               sendError('block is not closed.', this.__realPos);
-            } else {
-               let new_i = blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length;
-               this.__realPos -= (str.length - 1) - new_i;
-               blocks.openedBlock.ref.opened = false;
-               blocks.openedBlock = null;
-               __parseBlocks__(new_i);
-            }
-         }
+      for (let i = 0; i < blocks.values.length; i++) {
+         b = blocks.values[i];
+         str = str.replace(b.regex, repBlock);
       }
 
       //#endregion
 
       return str;
-
    }
+
    __parseOperators(str, options, operations) {
       /// RegExp: (var or num or block)(suffix)(op)(prefix)(var or num or block)
       /// ((?:[a-zA-Z_]+\d*)|(?:-?\d+\.?\d*)|(?:-?\d*\.?\d+))\s*((?:\+\+))?\s*((?:\+))\s*((?:\+\+|\+|\-))?\s*((?:[a-zA-Z_]+\d*)|(?:\d+\.?\d*)|(?:\d*\.?\d+))
@@ -654,4 +533,160 @@ export default class OperatorsParser {
       return _str;
    }
 
+   //// deprecated // deprecated // deprecated // deprecated // deprecated 
+   //// deprecated // deprecated // deprecated // deprecated // deprecated 
+   //// deprecated // deprecated // deprecated // deprecated // deprecated 
+
+   //#region 
+
+   // __parseBlocks(str, options, operations) {
+
+   //    //#region brackets
+   //    var that = this;
+   //    var blocks = options.blocks;
+
+   //    let __parseBlock__ = (index, str_) => {
+   //       //// checking error,,, this ill be done on handling bracket's content, so don't do for this. 
+   //       let name = getRandomName();
+
+   //       // let str_ = str.slice(index.opening, index.closing); /// cut the text from the next sibiling of the opening char until the current closingChar index
+   //       let b = blocks.openedBlock.ref;
+   //       let searchingTxt = b.openingChar + str_ + b.closingChar;
+   //       str = str.replace(searchingTxt, name); // if the replacement is global or not, there will no be any problem unless the developer using this library set a block with the same features as the bolck of our operation name.
+
+   //       let childArg;
+   //       if (b.handleContent) {
+   //          childArg = that.parse(str_); /// here you are parsing new string with no operations yet. /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
+   //       } else {
+   //          childArg = new Node('undefined', [], { content: str_ }); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
+   //       }
+   //       let sn = new Node('block', [childArg], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.name });
+   //       operations.set(name, sn);
+
+   //       b.opened = false; blocks.openedBlock = null; // reset
+
+   //       return index.closing + (name.length - searchingTxt.length); /// new_i /// setting the index, as the string may shrink or be taller, it depends on the length of the name
+   //    };
+
+   //    let __parseBlocks__ = (i_intial = 0) => {
+   //       for (let i = i_intial; i < str.length; i++) {
+   //          if (this.__realPos || this.__realPos === 0) this.__realPos += 1; // dealing with the intial str be fore the parsing process
+   //          for (let b of blocks) {
+   //             /// if a block is opened, closing has the priority, unless, opening has the priority::: you can notice this in ***Mohammed***, if you check the opening char first the num will increase to 2, thus the block will not be closed,,, and an error will occur.
+   //             if (blocks.openedBlock) {
+   //                if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
+   //                   if (b !== options.blocks.openedBlock.ref) {
+
+   //                      let iof = options.blocks.openedBlock.ref.openingChar.indexOf(b.openingChar);
+   //                      if (iof > -1) {
+   //                         // options.blocks.openedBlock.ref.openingChar  contains  b.closingChar::: for example *** contains **, you can use these blocks formatting typing, **Mohammed** will be bold.
+   //                         options.blocks.openedBlock.mayCloseAt = { ref: b, index: i, iof };
+   //                      } else {
+   //                         b.num--;
+   //                      }
+
+   //                   } else {
+   //                      b.num--;
+   //                   }
+   //                } else if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
+   //                   b.num++;
+   //                   i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+   //                   this.__realPos += b.openingChar.length - 1;
+   //                }
+   //             } else {
+   //                if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
+   //                   b.num++;
+   //                   i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+   //                   this.__realPos += b.openingChar.length - 1;
+   //                   // if (!blocks.openedBlock) { /// if not open, then open
+   //                   b.opened = true;
+   //                   blocks.openedBlock = { ref: b, index: i };
+   //                   // }
+   //                } else if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
+   //                   b.num--;
+   //                }
+   //             }
+
+   //             /// when a bracket is close, but not opened. e.g. ::: " 1+2-5) "
+   //             if (b.num < 0) {
+   //                if (b.mustOpen) {
+   //                   sendError('closing a block not opened.');
+   //                } else {
+   //                   b.num = 0;
+   //                }
+   //             }
+
+   //             /// if true, the bracket's block is defined.
+   //             if (b.num === 0 && b.opened) { /// may other brackets' num be zero, as it does not exist or as it is closed but it closed inside the block that we are setting,,, e.g.::: " 1+2({1,2,3}^-1) "
+   //                let index = {
+   //                   opening: blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length,
+   //                   closing: i
+   //                };
+   //                let _str = str.slice(index.opening, index.closing);
+   //                if (checker.check(_str, b.content)) {
+   //                   i = __parseBlock__(index, _str); /// __parseBlock__ returns the new_i
+   //                } else {
+   //                   b.num++; // the considered closingChar found is not compatible, so continue shearching for another closing char
+   //                }
+   //             }
+   //          }
+   //       }
+   //    };
+   //    __parseBlocks__();
+   //    /// after finishing looping searching for brackets blocks, oooops, what is this?!!!, oh, the bracket is not closed. send an error
+   //    if (blocks.openedBlock) {
+   //       if (blocks.openedBlock.mayCloseAt) {
+   //          let index = {
+
+   //             opening:
+   //                blocks.openedBlock.index +
+   //                // blocks.openedBlock.mayCloseAt.ref.openingChar.length +    this will be added later
+   //                blocks.openedBlock.mayCloseAt.iof,
+
+   //             closing: blocks.openedBlock.mayCloseAt.index
+
+   //          };
+   //          /// the openingChar can be for another block e.g.::: (( and (,when we close with )) the blocks is ((content)), otherwise if we close with ) our block is (content) and the second "(" is the first char in the content 
+   //          blocks.openedBlock.ref.opened = false;
+   //          blocks.openedBlock.ref.num = 0;
+   //          blocks.openedBlock = { ref: blocks.openedBlock.mayCloseAt.ref, index: index.opening };
+   //          index.opening += blocks.openedBlock.mayCloseAt.ref.openingChar.length;
+
+   //          let _str = str.slice(index.opening, index.closing);
+   //          this.__realPos = str.length - 1 - index.closing;
+   //          let new_i;
+   //          if (checker.check(_str, blocks.openedBlock.mayCloseAt.ref.content)) {
+   //             new_i = __parseBlock__(index, _str); /// __parseBlock__ returns the new_i
+   //             __parseBlocks__(new_i);
+   //          } else {
+   //             if (blocks.openedBlock.ref.mustClose) {
+   //                sendError('block is not closed.', this.__realPos);
+   //             }
+   //             // the considered closingChar found is not compatible as content failed at the test, so continue shearching for another closing char
+   //             // so start just after the openingChar of the openedBlock.ref,,, 
+   //             // new_i = index.opening;
+   //             this.__realPos -= _str.length;
+   //             __parseBlocks__(index.opening);
+   //          }
+
+   //       } else {
+   //          if (blocks.openedBlock.ref.mustClose) {
+   //             sendError('block is not closed.', this.__realPos);
+   //          } else {
+   //             let new_i = blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length;
+   //             this.__realPos -= (str.length - 1) - new_i;
+   //             blocks.openedBlock.ref.opened = false;
+   //             blocks.openedBlock = null;
+   //             __parseBlocks__(new_i);
+   //          }
+   //       }
+   //    }
+
+   //    //#endregion
+
+   //    return str;
+
+   // }
+
+   //#endregion
 }

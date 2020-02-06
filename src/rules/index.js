@@ -7,4 +7,4 @@ import Rule from './Rule.js';
 
 export default {
    AnyOf, AnyThing, Block, Repeat, Sequence, Rule
-}
+};

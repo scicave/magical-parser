@@ -1,5 +1,5 @@
 import { Operator, Separator, PrefixOperator, SuffixOperator } from '../tokens/Operators.js';
-import Block from '../tokens/Block.js/index.js';
+import Block from '../tokens/Block.js';
 import Node from '../Node.js';
 import { prepareOptions, sendError, contains, getRandomName } from '../global.js';
 

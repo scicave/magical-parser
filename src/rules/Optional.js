@@ -1,15 +1,12 @@
 import Rule from './Rule.js';
 import Node from '../Node.js';
-import { getGroupsNumInReg } from './../global.js';
 
-export default class SomeThing extends Rule {
-   constructor(properties) {
-      if (!properties.regex) throw new Error('the SomeThing rule must have test property');
-      properties.groupsNumInside = getGroupsNumInReg(properties.regex);
-      super('SomeThing', 0, [], properties);
+export default class Optional extends Rule {
+   constructor(child, properties) {
+      super('Optional', 1, [], properties);
    }
 
-   getRegex(groubIndex = 0) {
+   getRegex(groubIndex = 0, groubResult = true) {
       groubIndex = groubIndex || {
          num: 0,
          increase: function (step = 1) {
@@ -18,9 +15,10 @@ export default class SomeThing extends Rule {
          }
       };
       this.index = groubIndex.num;
-      groubIndex.increase(this.groupsNumInside);
+      let regex = this.childrenRules[0].getRegex(groubIndex.increase());
 
-      return `(${this.regex})`;
+      this.regex = regex;
+      return `((?:${regex})?)`;
    }
 
    parse(groups, useValue) {
@@ -29,16 +27,16 @@ export default class SomeThing extends Rule {
       let args = [];
 
       //#region getting args
-      if (parser) {
-         args.push(parser.parse(value));
+      if (value) {
+         args.push(this.childrenRules[0].parse(value));
       }
       //#endregion
 
       return new Node(this.name, args, {
          match: value,
+         content: groups[this.index + 2]
       });
 
    }
-
 
 }

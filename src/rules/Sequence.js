@@ -1,14 +1,13 @@
 import Rule from './Rule.js';
-
+import Node from '../Node.js';
 export default class Sequence extends Rule {
    constructor(childrenRules, properties) {
       properties = {
          spaced: true,
          ...properties
       };
-      this.rulesNum = -1;
       if (childrenRules.length == 0) throw new Error('Sequence musn\t be void.');
-      super('Sequence', [childrenRules], properties);
+      super('Sequence', -1, childrenRules, properties);
    }
 
    getRegex(groubIndex) {
@@ -16,24 +15,44 @@ export default class Sequence extends Rule {
          num: 0,
          increase: function (step = 1) {
             this.num += step;
+            return this;
          }
       };
-      this.index = { ...groubIndex };
+      this.index = groubIndex.num;
 
       //#region getting regex
       let regex = '';
       this.childrenRules.forEach(child => {
          regex += child.getRegex(groubIndex.increase());
-         if (properties.spaced) {
+         if (this.spaced) {
             regex += `\\s*`;
          }
       });
-      if (properties.spaced) {
-         regex = regex.slice(0, -('\\s*'.length));
+      if (this.spaced) {
+         regex = regex.slice(0, -('\\s*'.length)); /// remove the last \s* in the string
       }
       //#endregion
 
-      return `(${regex})\\s*`;
+      this.regex = regex;
+      return `(${regex})`;
    }
+
+   parse(groups, useValue) {
+
+      let value = useValue || groups[this.index + 1];
+      let args = [];
+
+      //#region getting args
+      for (let child of this.childrenRules) {
+         args.push(child.parse(groups));
+      }
+      //#endregion
+
+      return new Node(this.name, args, {
+         match: value,
+      });
+
+   }
+
 
 }
