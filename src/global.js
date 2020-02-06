@@ -8,6 +8,53 @@ export function strTOreg(str) {
    return new RegExp(regSpecialChars(str));
 }
 
+export function getGroupsNumInReg(reg) {
+
+   let groupsNum = 0;
+   /// reg .source == reg.toString().slice(1, ((reg) => { let num = reg.length - 1; while (reg[num] !== '/') num--; return num; })(reg.toString()))
+   let regStr = reg instanceof RegExp ?
+      reg.source :
+      reg;
+
+   if (regStr == '') return 0;
+
+   regStr = regStr
+      .replace(/\\./g, '')
+      // .replace(/\\\(|\\\)/, '')
+      .replace(/^([^(])+/, '');
+
+   if (regStr == '') return 0;
+
+   /// regStr[0] === '(' should be (
+
+   //#region get content of the group
+
+
+   //#endregion
+
+   if (regStr.indexOf('(') > -1) {
+      let num = 1;
+      for (let i = 1; i < regStr.length; i++) {
+         if (regStr[i] == ')') {
+            num--;
+         } else if (regStr[i] == '(') {
+            num++;
+         }
+         if (num == 0) {
+            // the group is closed
+            let content = regStr.slice(1, i);
+            if (regStr.slice(1, 3) !== '?:') groupsNum++;
+            groupsNum += getGroupsNumInReg(content);
+            regStr = regStr.slice(i + 1);
+            groupsNum += getGroupsNumInReg(regStr);
+            break;
+         }
+      }
+   }
+
+   return groupsNum || 0;
+}
+
 export var specialRegex = {
    regSpecialChars: /[+*/.$^(){}[\]]/,
    num: /(-?\d+\.?\d*)|(-?\d*\.?\d+)/,
@@ -92,7 +139,9 @@ export function sendError(type, msg, str = '', pos = undefined) {
 }
 
 export function prepareOptions(options) {
-
+   options.operators = options.operators || [];
+   options.prefixOperators = options.prefixOperators || [];
+   options.suffixOperators = options.suffixOperators || [];
    options.forbiddenChars = [...options.forbiddenChars, ...specialChars];
 
    //#region all
@@ -117,7 +166,7 @@ export function prepareOptions(options) {
                repeated = true;
                return ` (@${op.toString()},#${i}) `;
             });
-            if (!repeated) _all += `(@${op.regexStr()}#${i})`;
+            if (!repeated) _all += `(@${op.regexStr}#${i})`;
          }
          return _all;
       }
@@ -166,10 +215,12 @@ export function prepareOptions(options) {
 
    options.nameTestReg = new RegExp(options.nameTestReg);
    options.numTestReg = new RegExp(options.numTestReg);
-   options.argTest = `${options.nameTest}|${options.numTest}|##${options.nameTest}##`;
-   options.argTestReg = new RegExp(options.argTestReg);
+
    options.operationTest = operationBlockChar + options.nameTest + operationBlockChar;
    options.operationTestReg = new RegExp(options.operationTest);
+
+   options.argTest = `${options.nameTest}|${options.numTest}|${options.operationTest}`;
+   options.argTestReg = new RegExp(options.argTestReg);
 
    options.opTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`);
    options.opIntialTestReg = new RegExp(`^\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})`);

@@ -1,5 +1,5 @@
 // import block from "../../src/blocks.js";
-import CustomMathParser from './../../src/customParsers/Math.js';
+import CustomMathParser from '../../src/customParsers/Math.js';
 // var p = new MagicalParser.CustomParser.Math();
 var p = new CustomMathParser();
 
