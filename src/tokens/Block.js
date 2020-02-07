@@ -26,6 +26,7 @@ export default class Block {
       } else if (val instanceof Object) {
          this._id = val;
          if (val.opening && val.closing) {
+
             val.content = val.content || 'all';
             if (val.content instanceof RegExp) {
                val.content = val.content.toString().slice(1, -1);
@@ -36,6 +37,8 @@ export default class Block {
             }
             this.regexStr = `${regSpecialChars(val.opening)}(${val.content})${regSpecialChars(val.closing)}`;
             this.regex = new RegExp(this.regexStr);
+
+
          }
       } else {
          this._id = val;

@@ -139,10 +139,46 @@ export function sendError(type, msg, str = '', pos = undefined) {
 }
 
 export function prepareOptions(options) {
-   options.operators = options.operators || [];
-   options.prefixOperators = options.prefixOperators || [];
-   options.suffixOperators = options.suffixOperators || [];
+
+   defaultOptions = {
+
+      nameTest: '[_a-zA-Z]+\\d*',
+      numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
+      rules: [],
+
+      operators: [],
+      suffixOperators: [],
+      prefixOperators: [],
+      separators: [],
+
+      forbiddenChars: [],
+   };
+
    options.forbiddenChars = [...options.forbiddenChars, ...specialChars];
+   options = { ...defaultOptions, ...options };
+
+   //#region regex for search
+
+   options.rulesRegex = [];
+
+   options.rules.forEach(rule => {
+      options.rulesRegex.push(new RegExp(rule.getRegex()));
+   });
+
+   options.nameTestReg = new RegExp(options.nameTestReg);
+   options.numTestReg = new RegExp(options.numTestReg);
+
+   options.operationTest = operationBlockChar + options.nameTest + operationBlockChar;
+   options.operationTestReg = new RegExp(options.operationTest);
+
+   options.argTest = `${options.nameTest}|${options.numTest}|${options.operationTest}`;
+   options.argTestReg = new RegExp(options.argTestReg);
+
+   options.opTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`);
+   options.opIntialTestReg = new RegExp(`^\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})`);
+   options.opFinalTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})\\s*$`);
+
+   //#endregion
 
    //#region all
 
@@ -211,23 +247,6 @@ export function prepareOptions(options) {
 
    //#endregion
 
-   //#region regex for search
-
-   options.nameTestReg = new RegExp(options.nameTestReg);
-   options.numTestReg = new RegExp(options.numTestReg);
-
-   options.operationTest = operationBlockChar + options.nameTest + operationBlockChar;
-   options.operationTestReg = new RegExp(options.operationTest);
-
-   options.argTest = `${options.nameTest}|${options.numTest}|${options.operationTest}`;
-   options.argTestReg = new RegExp(options.argTestReg);
-
-   options.opTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`);
-   options.opIntialTestReg = new RegExp(`^\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})`);
-   options.opFinalTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})\\s*$`);
-
-   //#endregion
-
    //#region final steps
 
    // sort the array to be inversely according to zIndex property.
@@ -252,7 +271,7 @@ export function getRandomName() {
    let num = 0;
    /// randomNameNum is here to avoid getting the same random name if the code is implemented so fast
 
-   return this.operationBlockChar +
+   return getRandomName.operationBlockChar +
       (Date.now() + getRandomName.randomNameNum++).toString(36)
          .replace(new RegExp(num++, 'g'), 'a') /// I am using Regex for global replacement.
          .replace(new RegExp(num++, 'g'), 'b')
@@ -264,10 +283,10 @@ export function getRandomName() {
          .replace(new RegExp(num++, 'g'), 'h')
          .replace(new RegExp(num++, 'g'), 'i')
          .replace(new RegExp(num++, 'g'), 'j') +
-      this.operationBlockChar;
+      getRandomName.operationBlockChar;
 }
 getRandomName.randomNameNum = 0;
-getRandomName.operationBlockChar = operationBlockChar;
+getRandomName.operationBlockChar = '¶';
 
 export var operationBlockChar = '¶';
 

@@ -1,8 +1,6 @@
 export default class Rule {
 
-   /**
-    * @param {Array} childrenRules 
-    */
+
    constructor(ruleDefualtName, childrenNum, childrenRules, properties = {}) {
       properties.name = properties.name || ruleDefualtName;
       // if (!properties.parser) throw new Error('Magical Parser Rule "' + properties.name + '" Must Contian Parser');
@@ -13,6 +11,13 @@ export default class Rule {
          rule.parentRule = this;
       }
       this.childrenRules = childrenRules;
+      /**
+       * 
+       * there is something called rootPaser, this value wil be set inside the constructor of Parser class.
+       * 
+       * 
+       * 
+       */
    }
 
 
@@ -21,6 +26,9 @@ export default class Rule {
    }
 
    parse(groups, useValue) {
+      /**
+      * "useValue" is here to be used in the Repeat rule while parsing
+      */
       throw new Error("You mustn't call this function directly from the abstract class Rule.");
    }
 

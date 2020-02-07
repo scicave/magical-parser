@@ -22,8 +22,8 @@ export default class Repeat extends Rule {
 
       let timesTOrepeat = !isNaN(this.length) ? `{${this.length}}` : `+`;
 
-      this.repeatedRegex = this.childrenRules[0].getRegex(groubIndex.increase());
-      let content = this.repeatedRegex;
+      let content = this.childrenRules[0].getRegex(groubIndex.increase());
+      this.repeatedRegex = new RegExp(content, 'g');
 
       let regex;
       if (this.spaced) {
@@ -42,7 +42,7 @@ export default class Repeat extends Rule {
       let args = [];
 
       //#region getting args
-      groups[this.index].replace(new RegExp(this.repeatedRegex, 'g'), (match) => {
+      value.replace(this.repeatedRegex, (match) => {
          args.push(this.childrenRules[0].parse(groups, match));
          return '';
       });
