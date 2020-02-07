@@ -1,10 +1,16 @@
 import Rule from './Rule.js';
 import Node from '../Node.js';
-import { getGroupsNumInReg } from './../global.js';
+import { getGroupsNumInReg, strTOreg } from './../global.js';
 
 export default class SomeThing extends Rule {
+   /**
+    * @param {Object} properties set proberties to the Rule:
+    * name, "value" to search for
+    * 
+    */
    constructor(properties) {
       if (!properties.regex) throw new Error('the SomeThing rule must have test property');
+      properties.regex = properties.value instanceof RegExp ? properties.value : strTOreg(properties.value);
       properties.groupsNumInside = getGroupsNumInReg(properties.regex);
       super('SomeThing', 0, [], properties);
    }

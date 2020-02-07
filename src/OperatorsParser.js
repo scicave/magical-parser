@@ -16,10 +16,8 @@ import { Operator, Separator, PrefixOperator, SuffixOperator } from './tokens/Op
 
 export default class OperatorsParser {
 
-   constructor(env = 'math', options = {}) {
+   constructor(options = {}) {
       this.setEnvironment(env, options);
-      this.__randomNameNum = 0;
-      this.__realPos = 0;
    }
 
    //#region getter, setter
@@ -34,7 +32,6 @@ export default class OperatorsParser {
       this._environment = env;
 
       this._options = {
-         nameTest: '[_a-zA-Z]+\\d*',
          scope: [],
          forbiddenChars: [],
          operator: [],
@@ -57,45 +54,45 @@ export default class OperatorsParser {
       prepareOptions(options);
    }
 
-   setOperator(op, type) {
-      if (!type) {
-         if (op instanceof Operator) {
-            type = 'operators';
-         }
-         else if (op instanceof SuffixOperator) {
-            type = 'suffixOperator';
-         }
-         else if (op instanceof PrefixOperator) {
-            type = 'prefixOperator';
-         }
-         else if (op instanceof Separator) {
-            type = 'separator';
-         } else {
-            return undefined;
-         }
-      }
-      let found = false,
-         arr = this.options[type];
-      this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${op.regex})#(\\d*)\\)`), (match, name, index) => {
-         // you are trying to add a n already existed operator,
-         found = true;
-         Object.assign(op, arr[parseInt(index)]);
-         arr.splice(parseInt(index), 1);
-         arr.push(op);
-         return `(@${op.regex}#${arr.length})`;
-      });
-      if (!found) {
-         arr.push(op);
-         this.options.all[type] += `(@${op.regexStr}#${arr.length})`;
-      }
-   }
-   removeOperator(name, type) {
-      this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${name})#(\\d*)\\)`), (match, name, index) => {
-         // you are trying to add a n already existed operator,
-         this.options[type].splice(parseInt(index), 1);
-         return '';
-      });
-   }
+   // setOperator(op, type) {
+   //    if (!type) {
+   //       if (op instanceof Operator) {
+   //          type = 'operators';
+   //       }
+   //       else if (op instanceof SuffixOperator) {
+   //          type = 'suffixOperator';
+   //       }
+   //       else if (op instanceof PrefixOperator) {
+   //          type = 'prefixOperator';
+   //       }
+   //       else if (op instanceof Separator) {
+   //          type = 'separator';
+   //       } else {
+   //          return undefined;
+   //       }
+   //    }
+   //    let found = false,
+   //       arr = this.options[type];
+   //    this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${op.regex})#(\\d*)\\)`), (match, name, index) => {
+   //       // you are trying to add a n already existed operator,
+   //       found = true;
+   //       Object.assign(op, arr[parseInt(index)]);
+   //       arr.splice(parseInt(index), 1);
+   //       arr.push(op);
+   //       return `(@${op.regex}#${arr.length})`;
+   //    });
+   //    if (!found) {
+   //       arr.push(op);
+   //       this.options.all[type] += `(@${op.regexStr}#${arr.length})`;
+   //    }
+   // }
+   // removeOperator(name, type) {
+   //    this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${name})#(\\d*)\\)`), (match, name, index) => {
+   //       // you are trying to add a n already existed operator,
+   //       this.options[type].splice(parseInt(index), 1);
+   //       return '';
+   //    });
+   // }
 
    //#endregion
 
@@ -160,6 +157,12 @@ export default class OperatorsParser {
       //       }
       //    }
       // });
+
+      for (let i = 0; i < options.rulesRegex.length; i++) {
+         str = str.replace(options.rulesRegex[i], () => {
+
+         });
+      }
 
       str = this.__parseOpertors(str, operations);
 
@@ -262,8 +265,8 @@ export default class OperatorsParser {
          return name;
       };
 
-      for (let i = 0; i < blocks.values.length; i++) {
-         b = blocks.values[i];
+      for (let i = 0; i < blocks.length; i++) {
+         b = blocks[i];
          str = str.replace(b.regex, repBlock);
       }
 

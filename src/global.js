@@ -139,10 +139,46 @@ export function sendError(type, msg, str = '', pos = undefined) {
 }
 
 export function prepareOptions(options) {
-   options.operators = options.operators || [];
-   options.prefixOperators = options.prefixOperators || [];
-   options.suffixOperators = options.suffixOperators || [];
+
+   defaultOptions = {
+
+      nameTest: '[_a-zA-Z]+\\d*',
+      numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
+      rules: [],
+
+      operators: [],
+      suffixOperators: [],
+      prefixOperators: [],
+      separators: [],
+
+      forbiddenChars: [],
+   };
+
    options.forbiddenChars = [...options.forbiddenChars, ...specialChars];
+   options = { ...defaultOptions, ...options };
+
+   //#region regex for search
+
+   options.rulesRegex = [];
+
+   options.rules.forEach(rule => {
+      options.rulesRegex.push(new RegExp(rule.getRegex()));
+   });
+
+   options.nameTestReg = new RegExp(options.nameTestReg);
+   options.numTestReg = new RegExp(options.numTestReg);
+
+   options.operationTest = operationBlockChar + options.nameTest + operationBlockChar;
+   options.operationTestReg = new RegExp(options.operationTest);
+
+   options.argTest = `${options.nameTest}|${options.numTest}|${options.operationTest}`;
+   options.argTestReg = new RegExp(options.argTestReg);
+
+   options.opTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`);
+   options.opIntialTestReg = new RegExp(`^\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})`);
+   options.opFinalTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})\\s*$`);
+
+   //#endregion
 
    //#region all
 
@@ -208,23 +244,6 @@ export function prepareOptions(options) {
    options.allRegex = all;
 
    //#endregion
-
-   //#endregion
-
-   //#region regex for search
-
-   options.nameTestReg = new RegExp(options.nameTestReg);
-   options.numTestReg = new RegExp(options.numTestReg);
-
-   options.operationTest = operationBlockChar + options.nameTest + operationBlockChar;
-   options.operationTestReg = new RegExp(options.operationTest);
-
-   options.argTest = `${options.nameTest}|${options.numTest}|${options.operationTest}`;
-   options.argTestReg = new RegExp(options.argTestReg);
-
-   options.opTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`);
-   options.opIntialTestReg = new RegExp(`^\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})`);
-   options.opFinalTestReg = new RegExp(`^\\s*(${options.allRegex.suffixOperators})\\s*$`);
 
    //#endregion
 
