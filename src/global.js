@@ -271,7 +271,7 @@ export function getRandomName() {
    let num = 0;
    /// randomNameNum is here to avoid getting the same random name if the code is implemented so fast
 
-   return this.operationBlockChar +
+   return getRandomName.operationBlockChar +
       (Date.now() + getRandomName.randomNameNum++).toString(36)
          .replace(new RegExp(num++, 'g'), 'a') /// I am using Regex for global replacement.
          .replace(new RegExp(num++, 'g'), 'b')
@@ -283,10 +283,10 @@ export function getRandomName() {
          .replace(new RegExp(num++, 'g'), 'h')
          .replace(new RegExp(num++, 'g'), 'i')
          .replace(new RegExp(num++, 'g'), 'j') +
-      this.operationBlockChar;
+      getRandomName.operationBlockChar;
 }
 getRandomName.randomNameNum = 0;
-getRandomName.operationBlockChar = operationBlockChar;
+getRandomName.operationBlockChar = '¶';
 
 export var operationBlockChar = '¶';
 

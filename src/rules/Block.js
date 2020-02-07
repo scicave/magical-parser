@@ -1,8 +1,9 @@
 import Rule from './Rule.js';
 import Node from '../Node.js';
-import { getGroupsNumInReg, getRandomName, regSpecialChars } from '../global.js';
+import { getGroupsNumInReg, getRandomName, regSpecialChars, operationBlockChar } from '../global.js';
+import Parser from '../Parser.js';
 
-export default class Repeat extends Rule {
+export default class Block extends Rule {
    /**
     * 
     * @param {Object} properties 
@@ -18,9 +19,7 @@ export default class Repeat extends Rule {
       if (properties.opening && properties.closing) {
          if (properties.opening !== properties.closing) {
             /** this Block can't be represented by regex */
-            this._blockStateToParents();
-            this.blockState = true;
-            this.id = getRandomName();
+            properties.blockState = true;
          }
          properties.content = properties.content || 'all';
          properties.groupsNumInside = 0; /// if the content is regex, we should take care of the groups inside
@@ -46,8 +45,11 @@ export default class Repeat extends Rule {
 
    }
 
-   getRegex(groubIndex) {
-      if (this.blockState) {
+   getRegex(groubIndex, ignoreBlockState) {
+      if (this.blockState && !ignoreBlockState) {
+         this._blockStateToParents();
+         this.id = getRandomName();
+
          groubIndex = groubIndex || {
             num: 0,
             increase: function (step = 1) {
@@ -55,18 +57,19 @@ export default class Repeat extends Rule {
                return this;
             }
          };
+         this.realRegex = new RegExp(this.getRegex(null, true));
          this.index = groubIndex.num;
-         this.regexInside = this.childrenRules[0].getRegex({
-            num: 0,
-            increase: function (step = 1) {
-               this.num += step;
-               return this;
-            }
-         });
+
+         if (this.content instanceof Rule) {
+            this.parser = new Parser(this.childrenRules[0]);
+         }
+
          // rootParser is an instance of "Parser" class, it is defined in the constructor of "Parser" class
          this.rootParser.blocksRules.push(this);
-         this.regex = this.id; // the represetig string in the total string
-         return `(${this.regex})`;
+         this.rootParser.blockState = true;
+
+         this.matchIdRegex = new RegExp(`${this.id}${operationBlockChar}\\d+${operationBlockChar}`); // the represetig string in the total string
+         return `(${this.matchIdRegex.source})`;
       } else {
          groubIndex = groubIndex || {
             num: 0,
@@ -91,28 +94,38 @@ export default class Repeat extends Rule {
    }
 
    _blockStateToParents() {
-      do {
+      let parent = this.parentRule;
+      while (parent) {
          parent.blockState = true;
          parent = parent.parentRule;
-      } while (parent.parentRule);
+         parent = parent.parentRule;
+      }
+   }
+
+   getMatchId(index) {
+      return this.id + operationBlockChar + index + operationBlockChar;
    }
 
    parse(groups, useValue) {
       if (this.blockState) {
-         let value = this.useValue; // is defined at the rootParser in the paring process
+         let value = useValue || groups[this.index + 1];
          let args = [];
+         let index = (value.split(operationBlockChar))[3];
+         value = this.matches[index].str; // is defined at the rootParser in the paring process
+
+         //#region getting groups
+
+         //#endregion
 
          //#region getting args
-         if (this.content instanceof Rule) {
-            args = this.content.parse(this.useGroups);
-         } else if (this.parser) {
+         if (this.parser) {
             args = this.parser.parse(value);
          }
          //#endregion
 
          return new Node(this.name, args, {
             match: value,
-            content: groups[this.index + 2] /// the current group in the array is in the index : this.index + 1
+            content: this.matches[index].content /// the current group in the array is in the index : this.index + 1
          });
       } else {
          let value = useValue || groups[this.index + 1];

@@ -1,4 +1,5 @@
 import MagicalParser from '../../build/index.js';
+import { Separator } from '../../src/tokens/Operators.js';
 
 const r = MagicalParser.Rules;
 const t = MagicalParser.Tokens;
@@ -15,6 +16,9 @@ operatorsParser.selector = new MagicalParser.OperatorsParser('new', {
    suffixOperators: [
       new t.SuffixOperator({ id: '#' }),
       new t.SuffixOperator({ id: '.' }),
+   ],
+   separators: [
+      new Separator({ id: ',' })
    ]
 });
 
@@ -25,7 +29,9 @@ operatorsParser.content = new MagicalParser.OperatorsParser('new', {
       new t.Operator({ id: '+' }),
       new t.Operator({ id: '~' }),
    ],
-   spera
+   separators: [
+      new Separator({ id: ';' })
+   ]
 });
 
 let grammer = getGrammer();
@@ -68,7 +74,8 @@ a:visited {
    color: rgb(0, 224, 224);
 }
 `;
-
+console.time('parsing')
 let parsed = cssParser.parse(css);
+console.timeEnd('parsing')
 
 console.log(parsed);

@@ -17,7 +17,7 @@ import { Operator, Separator, PrefixOperator, SuffixOperator } from './tokens/Op
 export default class OperatorsParser {
 
    constructor(options = {}) {
-      this.setEnvironment(env, options);
+      this.setEnvironment(options);
    }
 
    //#region getter, setter
