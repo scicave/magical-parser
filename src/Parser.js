@@ -1,10 +1,10 @@
-
+import { regSpecialChars, operationBlockChar } from '../src/global.js';
 export default class Parser {
    constructor(grammer) {
       this.grammer = grammer;
-      this.blockState = grammer.blockState;
-
-      //#region seeting the rootParser
+      this.matchesTest = new RegExp(`(${operationBlockChar}\\w+${operationBlockChar})${operationBlockChar}(\\d+)${operationBlockChar}`, 'g');
+      this.matches = [];
+      //#region seting the rootParser
       let setRootParser = (rule) => {
          rule.rootParser = this;
          for (let child of rule.childrenRules) {
@@ -20,7 +20,6 @@ export default class Parser {
       //#endregion
 
       this.prepareRegex();
-
    }
 
    prepareRegex() {
@@ -37,6 +36,7 @@ export default class Parser {
              * this when a Block in this.grammer can't be searched as regex,
              *  we will use Block.id for searchin them
              */
+
             //#region brackets
             for (let block of this.blocksRules) {
                let getMatches = function (_str, matches, shift = 0) {
@@ -103,7 +103,7 @@ export default class Parser {
                };
                let matches = [];
                getMatches(str, matches);
-               block.matches = matches;
+               this.matches = { ... this.matches, [block.id]: matches };
                for (let i = 0; i < matches.length; i++) {
                   // there is matched string in the "str"
                   if (block.realRegex.test(matches[i].str)) {
@@ -121,18 +121,17 @@ export default class Parser {
 
             }
             //#endregion
-         }
-         // this is an awesome state, when all blocks can be represented as regex...
-         // I wish all the code to be wrapped around by an awesome algorithms and special states
+
+         } /* else {    
+            // this is an awesome state, when all blocks can be represented as regex...
+            // I wish all the code to be wrapped around by an awesome algorithms and special states
+         } */
 
          str.replace(this.regex, function () {
             groups = arguments;
          });
          if (!groups) throw new Error("your code doesn't match");
          groups = [...groups]; groups.pop(); groups.pop();
-         if (this.blockState) {
-            /// replace the matchedStrId with the str it self in each Rule until the Block
-         }
          //#endregion
 
          return this.grammer.parse(groups);

@@ -12,6 +12,14 @@ export class commonOperator {
       options = { zIndex: 0, ...options }; // overriding default options by the passed options (options argument)
       Object.assign(this, options);
    }
+
+   get name() {
+      return this._name || this._id;
+   }
+   set name(name) {
+      this._name = name;
+   }
+
    get id() {
       return this._id;
    }

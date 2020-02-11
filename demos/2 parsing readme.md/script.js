@@ -1,4 +1,4 @@
-import Parser from "../../src/Parser";
+import Parser from "./../../src/Parser";
 
 let input = document.querySelector('md-input');
 let output = document.querySelector('md-output');
@@ -7,7 +7,7 @@ let parser = new Parser();
 input.value =
    `
    # SCICAVE Team
-   * This * ** is ** a demo for parsing readme files with .md ext,
+   > * This * *_ is _* a demo for parsing markdown[readme.md] files.
    
    ## list
    * first item
@@ -32,5 +32,5 @@ input.change = function () {
 };
 
 function getElt(pval) {
-   
+
 }

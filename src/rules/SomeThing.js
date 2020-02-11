@@ -34,6 +34,12 @@ export default class SomeThing extends Rule {
       let value = useValue || groups[this.index + 1];
       let args = [];
 
+      if (this.blockState) {
+         value = value.replace(this.rootParser.matchesTest, (match, id, index) => {
+            return this.rootParser.matches[id][index].str;
+         });
+      }
+
       //#region getting args
       if (parser) {
          args.push(parser.parse(value));

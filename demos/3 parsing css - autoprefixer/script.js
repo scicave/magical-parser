@@ -1,5 +1,5 @@
-import MagicalParser from '../../build/index.js';
-import { Separator } from '../../src/tokens/Operators.js';
+import MagicalParser from './../../build/index.js';
+import { Separator } from './../../src/tokens/Operators.js';
 
 const r = MagicalParser.Rules;
 const t = MagicalParser.Tokens;

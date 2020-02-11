@@ -98,7 +98,6 @@ export default class Block extends Rule {
       while (parent) {
          parent.blockState = true;
          parent = parent.parentRule;
-         parent = parent.parentRule;
       }
    }
 
@@ -111,21 +110,17 @@ export default class Block extends Rule {
          let value = useValue || groups[this.index + 1];
          let args = [];
          let index = (value.split(operationBlockChar))[3];
-         value = this.matches[index].str; // is defined at the rootParser in the paring process
-
-         //#region getting groups
-
-         //#endregion
+         value = this.rootParser.matches[this.id][index]; // is defined at the rootParser in the paring process
 
          //#region getting args
          if (this.parser) {
-            args = this.parser.parse(value);
+            args = this.parser.parse(value.content);
          }
          //#endregion
 
          return new Node(this.name, args, {
-            match: value,
-            content: this.matches[index].content /// the current group in the array is in the index : this.index + 1
+            match: value.str,
+            content: value.content /// the current group in the array is in the index : this.index + 1
          });
       } else {
          let value = useValue || groups[this.index + 1];

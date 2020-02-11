@@ -32,11 +32,17 @@ export default class AnyOf extends Rule {
       let value = useValue || groups[this.index + 1];
       let args = [];
 
+      if (this.blockState) {
+         value = value.replace(this.rootParser.matchesTest, (match, id, index) => {
+            return this.rootParser.matches[id][index].str;
+         });
+      }
+
       //#region getting args
       for (let child of this.childrenRules) {
-         if (groups.values[child.index] || groups.values[child.index + 1] === 0) {
+         if (groups.values[child.index]) {
             // this is the child being found
-            args.push(target.parse(groups));
+            args.push(child.parse(groups));
             break;
          }
       }

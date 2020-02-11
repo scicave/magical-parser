@@ -142,8 +142,8 @@ export function prepareOptions(options) {
 
    defaultOptions = {
 
-      nameTest: '[_a-zA-Z]+\\d*',
-      numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
+      // nameTest: '[_a-zA-Z]+\\d*',
+      // numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
       rules: [],
 
       operators: [],

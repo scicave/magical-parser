@@ -23,6 +23,12 @@ export default class AnyThing extends Rule {
       let value = useValue || groups[this.index + 1];
       let args = [];
 
+      if (this.blockState) {
+         value = value.replace(this.rootParser.matchesTest, (match, id, index) => {
+            return this.rootParser.matches[id][index].str;
+         });
+      }
+
       //#region getting args
       if (this.parser) {
          args.push(this.parser.parse(value));

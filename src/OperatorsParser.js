@@ -17,87 +17,11 @@ import { Operator, Separator, PrefixOperator, SuffixOperator } from './tokens/Op
 export default class OperatorsParser {
 
    constructor(options = {}) {
-      this.setEnvironment(options);
-   }
-
-   //#region getter, setter
-
-   get environment() {
-      return this._environment;
-   }
-   set environment(env) {
-      console.Error('You can not set environment property directly, use setEnvironment instead.');
-   }
-   setEnvironment(env, options) {
-      this._environment = env;
-
-      this._options = {
-         scope: [],
-         forbiddenChars: [],
-         operator: [],
-         suffixOperators: [],
-         prefixOperators: [],
-         separators: [],
-         blocks: [],
-         ...environments.get(env)
-      };
-
-      if (options)
-         this.options = options; /// adjustments and computations will occur here
-   }
-
-   get options() {
-      return this._options;
-   }
-   set options(options) {
-      options = Object.assign(this._options, options); /// make this._options a reference for options
+      this.options = options;
       prepareOptions(options);
    }
 
-   // setOperator(op, type) {
-   //    if (!type) {
-   //       if (op instanceof Operator) {
-   //          type = 'operators';
-   //       }
-   //       else if (op instanceof SuffixOperator) {
-   //          type = 'suffixOperator';
-   //       }
-   //       else if (op instanceof PrefixOperator) {
-   //          type = 'prefixOperator';
-   //       }
-   //       else if (op instanceof Separator) {
-   //          type = 'separator';
-   //       } else {
-   //          return undefined;
-   //       }
-   //    }
-   //    let found = false,
-   //       arr = this.options[type];
-   //    this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${op.regex})#(\\d*)\\)`), (match, name, index) => {
-   //       // you are trying to add a n already existed operator,
-   //       found = true;
-   //       Object.assign(op, arr[parseInt(index)]);
-   //       arr.splice(parseInt(index), 1);
-   //       arr.push(op);
-   //       return `(@${op.regex}#${arr.length})`;
-   //    });
-   //    if (!found) {
-   //       arr.push(op);
-   //       this.options.all[type] += `(@${op.regexStr}#${arr.length})`;
-   //    }
-   // }
-   // removeOperator(name, type) {
-   //    this.options.all[type] = this.options.all[type].replace(new RegExp(`\\(@(${name})#(\\d*)\\)`), (match, name, index) => {
-   //       // you are trying to add a n already existed operator,
-   //       this.options[type].splice(parseInt(index), 1);
-   //       return '';
-   //    });
-   // }
-
-   //#endregion
-
    /**
-    * 
     * @param {string} str the string to be parsed 
     * @param {object} options if you want to override the aleardy existing options
     * @param {array} operations 
@@ -117,14 +41,6 @@ export default class OperatorsParser {
       for (let i = 0; i < forbiddenChars.length; i++) {
          if (contains(str, forbiddenChars[i])) sendError('forbidden char ' + forbiddenChars[i]);
       }
-
-      // if (options.autoMultSign) {
-      //    /// var( => var*( /// -.023 var => -.023 var /// -564.012345(...) => -564.012345*(...)
-      //    str = str.replace(new RegExp('((?:-?\\d+\\.?\\d*)|(?:-?\\d*\\.?\\d+))\\s*(\\(|' + options.nameTest + ')', 'g'), '$1 * $2');
-      //    /// the code beneath will be exuted in replacing funcName##funcArgsName## with funcName##funcArgsName##
-      //    // str = str.replace(new RegExp(`(${options.nameTest})\\s*\\(`, 'g'), (match, g) => {
-      //    // });
-      // }
 
       // if empty of characters
       str = str.replace(/^\s*$/, () => {
@@ -151,7 +67,7 @@ export default class OperatorsParser {
 
       //          let sn = new Node('implementFunction', _args.args, { name });
       //          operations.set(args, sn);
-      //          return args; /// replace "name  ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
+      //          return args; /// replace "name ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
       //       } else {
       //          return match;
       //       }
@@ -160,7 +76,7 @@ export default class OperatorsParser {
 
       for (let i = 0; i < options.rulesRegex.length; i++) {
          str = str.replace(options.rulesRegex[i], () => {
-
+            return
          });
       }
 
@@ -171,6 +87,7 @@ export default class OperatorsParser {
       this.__parse(str, options, operations, { parseBlocks: false, parseOperators: false });
 
    }
+
    __parse(str, options, operations, subOptions = {}) {
 
       subOptions = { parseBlocks: true, parseOperators: true, ...subOptions }; /// or use Object.assign
@@ -536,11 +453,11 @@ export default class OperatorsParser {
       return _str;
    }
 
-   //// deprecated // deprecated // deprecated // deprecated // deprecated 
-   //// deprecated // deprecated // deprecated // deprecated // deprecated 
-   //// deprecated // deprecated // deprecated // deprecated // deprecated 
+   //#region deprecated
 
-   //#region 
+   //// deprecated // deprecated // deprecated // deprecated // deprecated 
+   //// deprecated // deprecated // deprecated // deprecated // deprecated 
+   //// deprecated // deprecated // deprecated // deprecated // deprecated
 
    // __parseBlocks(str, options, operations) {
 

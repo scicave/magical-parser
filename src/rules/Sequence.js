@@ -48,6 +48,12 @@ export default class Sequence extends Rule {
       }
       //#endregion
 
+      if (this.blockState) {
+         value = value.replace(this.rootParser.matchesTest, (match, id, index) => {
+            return this.rootParser.matches[id][index].str;
+         });
+      }
+
       return new Node(this.name, args, {
          match: value,
       });

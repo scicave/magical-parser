@@ -1,7 +1,49 @@
-// import block from "../../src/blocks.js";
-import CustomMathParser from '../../src/customParsers/Math.js';
+// import block from "./../../src/blocks.js";
+import MagicalParser from './../../build/index.js';
+import { operationBlockChar } from '../../src/global.js';
+
 // var p = new MagicalParser.CustomParser.Math();
-var p = new CustomMathParser();
+const r = MagicalParser.Rules;
+const t = MagicalParser.Tokens;
+const Sequence = r.Sequence,
+   Optional = r.Optional,
+   Something = r.Something,
+   AnyOf = r.AnyOf;
+
+//#region getting the math parser using the new algorithm
+const operators = new AnyOf([
+   new Something('+'),
+   new Something('-'),
+   new Something('*'),
+   new Something('/'),
+   new Something('>'),
+   new Something('<'),
+   new Something(''),
+
+]),
+   suffixes,
+   prefixes,
+   args;
+var p = new MagicalParser.CustomParsers.Math();
+var p = new MagicalParser.Parser(new Sequence([
+
+   new Sequence([
+      new Optional(prefixes),
+      args
+   ]),
+
+   new Sequence([
+      new Optional(prefixes),
+      operators,
+      new Optional(suffixes),
+      args
+   ]),
+
+   new Optional(suffixes),
+
+]));
+
+//#endregion
 
 function PARSE(valueTOparse) {
    // console.log('logging from ./demos/1 .../script.js');
