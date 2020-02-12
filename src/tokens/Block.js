@@ -12,8 +12,8 @@ export default class Block {
       Object.assign(this, options);
 
       // these properties are deprecated and algorithms was enhanced :._.:
-      // this.opened = false; 
-      // this.num = 0;
+      this.opened = false; 
+      this.num = 0;
    }
    get id() {
       return this._id;
@@ -22,28 +22,27 @@ export default class Block {
       if (val instanceof RegExp) {
          this._id = val;
          this.regex = val;
-         this.regexStr = val.toString().slice(1, -1);
+         this.regexStr = val.source;
       } else if (val instanceof Object) {
          this._id = val;
          if (val.opening && val.closing) {
 
             val.content = val.content || 'all';
             if (val.content instanceof RegExp) {
-               val.content = val.content.toString().slice(1, -1);
+               val.content = val.content.source;
             } else if (val.content === 'all') {
-               val.content = '.*?';
+               val.content = '.*?|\\s*';
             } else {
                val.content = regSpecialChars(val.content);
             }
             this.regexStr = `${regSpecialChars(val.opening)}(${val.content})${regSpecialChars(val.closing)}`;
             this.regex = new RegExp(this.regexStr);
 
-
          }
       } else {
          this._id = val;
          this.regex = new RegExp(regSpecialChars(val));
-         this.regexStr = val.toString();
+         this.regexStr = this.regex.source;
       }
       // settingthe regex to be global
       if (!this.regex.global) this.regex = new RegExp(this.regex.source, this.regex.flags + 'g');
