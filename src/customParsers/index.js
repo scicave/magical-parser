@@ -3,6 +3,6 @@ import ProgMath from './ProgMath.js';
 
 
 export default {
-   Math,
-
+  Math,
+  ProgMath
 };

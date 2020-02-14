@@ -7,7 +7,8 @@ export default class Block {
 
    constructor(options = {}) {
       options = {
-         ...options
+        parser: 'inherit',
+        ...options
       };
       Object.assign(this, options);
 
@@ -31,7 +32,7 @@ export default class Block {
             if (val.content instanceof RegExp) {
                val.content = val.content.source;
             } else if (val.content === 'all') {
-               val.content = '.*?|\\s*';
+               val.content = '(?:.*?|\\s*)*';
             } else {
                val.content = regSpecialChars(val.content);
             }
@@ -46,6 +47,18 @@ export default class Block {
       }
       // settingthe regex to be global
       if (!this.regex.global) this.regex = new RegExp(this.regex.source, this.regex.flags + 'g');
+   }
+
+   get name(){
+      if(this._name) return this._name;
+      if(this.id instanceof Object){
+         return this.id.opening + this.id.closing; 
+      }else{
+         return null;
+      }
+   }
+   set name(value){
+      this._name = value;
    }
 
    get content() {

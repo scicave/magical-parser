@@ -69,16 +69,16 @@ export default class CustomMathParser {
       separators: [new Separator({ id: ";" }), new Separator({ id: "," })],
 
       blocks: [
-        new Block({ id: { openingChar: "{", closingChar: "}" } }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
-        new Block({ id: { openingChar: "[", closingChar: "]" } }), // []
-        new Block({ id: { openingChar: "(", closingChar: ")" } }), // ()
+        new Block({ id: { opening: "{", closing: "}" } }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
+        new Block({ id: { opening: "[", closing: "]" } }), // []
+        new Block({ id: { opening: "(", closing: ")" } }), // ()
         new Block({ id: /"(.*?|\\")*"/ }), /// string: ""
         new Block({ id: /'(.*?|\\')*'/ }) /// string: ''
       ],
 
-      forbiddenChars: ['1564sd"']
+      forbiddenChars: []
     };
-    this.options = options;
+    this.options = {...this._options, ...(options || {})};
   }
 
   get options() {
@@ -86,8 +86,7 @@ export default class CustomMathParser {
   }
 
   set options(options) {
-    options = Object.assign(this._options, options);
-    prepareOptions(options);
+    this._options = prepareOptions(options);
   }
 
   parse(str, operations = null) {
@@ -108,10 +107,10 @@ export default class CustomMathParser {
   }
 
   __parse(str, options, operations, subOptions = {}) {
-    let snode;
     subOptions = { parseBlocks: true, parseOperators: true, ...subOptions }; /// or use Object.assign
 
     // if empty of characters
+    let snode;
     str = str.replace(/^\s*$/, () => {
       snode = new Node("");
     });
@@ -124,7 +123,7 @@ export default class CustomMathParser {
       str = this.__parseOperators(str, options, operations);
     }
 
-    return __parseArg(str);
+    return this.__parseArg(str, options, operations);
   }
 
   /**
@@ -132,14 +131,23 @@ export default class CustomMathParser {
    */
   __parseBlocks(str, options, operations) {
     //#region brackets
-
     var blocks = options.blocks;
 
     let b;
     let repBlock = (match, content) => {
       let name = getRandomName();
-      let sn = new Node("block", [this.__parse(content, options, operations)], {
-        id: b.id
+      let args = [];
+      if (b.parser) {
+        if(b.parser === 'inherit'){
+          args = [this.__parse(content, options, operations)];
+        }else{
+          args = [b.parser(content)];
+        }
+      }
+      let sn = new Node("block", args, {
+        name: b.name,
+        match,
+        content
       });
       operations.set(name, sn);
       return name;
@@ -149,20 +157,17 @@ export default class CustomMathParser {
       b = blocks.values[i];
       str = str.replace(b.regex, repBlock);
     }
-
-    //#endregion
-
     return str;
   }
 
   __parseOperators(str, options, operations) {
-    /// RegExp: (var or num or block)(suffix)(op)(prefix)(var or num or block)
+    /// RegExp: (arg)(suffix)(op)(prefix)(arg)
     /// ((?:[a-zA-Z_]+\d*)|(?:-?\d+\.?\d*)|(?:-?\d*\.?\d+))\s*((?:\+\+))?\s*((?:\+))\s*((?:\+\+|\+|\-))?\s*((?:[a-zA-Z_]+\d*)|(?:\d+\.?\d*)|(?:\d*\.?\d+))
 
     //#region separators
     for (let s of options.separators) {
       if (contains(str, s.id)) {
-        let name = this.__get;
+        let name = this.getRandomName();
         let args = [];
         let strs = str.split(s);
         for (let str_ of strs) {
@@ -170,7 +175,7 @@ export default class CustomMathParser {
         }
         operations.set(
           name,
-          new Node("separator", args, { name: s.id, length: args.length })
+          new Node("separator", args, { name: s.name, length: args.length })
         );
       }
     }
@@ -178,64 +183,23 @@ export default class CustomMathParser {
 
     //#region preparing for parsing process
     let _str = "",
-      prevArg = {
-        name: null,
-        sn: null
-      };
+      prevArg = null;
     //#endregion
 
     //#region searching for operators and parsing suffix and prefix
-
     /// intial replacement
     str = str.replace(options.opIntialTestReg, (match, prefix, arg) => {
       if (prefix) {
-        let a = arg,
-          b = "prefixOperator",
-          c = prefix;
-        if (!isNaN(a)) {
-          /// number
-          let name = getRandomName();
-          let sn = new Node(b, new Node("number", [], { value: parseInt(a) }), {
-            name: c
-          });
-          operations.set(name, sn);
-          prevArg = { name, sn };
-        } else {
-          let found = false;
-          a.replace(options.operationTestReg, () => {
-            found = true;
-          });
-          if (found) {
-            /// operations
-            let sn = new Node(
-              b,
-              operations.get(a), /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
-              { name: c }
-            );
-            operations.set(a, sn);
-            prevArg.sn = { name: a, sn };
-          } else {
-            /// varName
-            let name = getRandomName();
-            let sn = new Node(b, new Node("variable", [], { name: a }), {
-              name: c
-            });
-            operations.set(name, sn);
-            prevArg = { name, sn };
-          }
-        }
-      } else {
-        let found = false;
-        arg.replace(options.operationTestReg, () => {
-          found = true;
+        let name = getRandomName();
+        let sn = new Node("prefixOperator", this.__parseArg(arg, options, operations), {
+          id: prefix,
+          match: match,
         });
-        if (found) {
-          prevArg = { name: arg, sn: operations.get(arg) };
-        } else {
-          prevArg = { name: arg };
-        }
+        operations.set(name, sn);
+        prevArg = name;
+      } else {
+        prevArg = arg;
       }
-
       return "";
     });
 
@@ -250,96 +214,27 @@ export default class CustomMathParser {
         }
 
         if (suffix) {
-          /// creating an operations with type of  prefix operator,,, its arg is the prev arg
-          let a = prevArg.name,
-            b = "suffixOperator",
-            c = suffix;
-          if (!isNaN(a)) {
-            /// number
-            let name = getRandomName();
-            let sn = new Node(
-              b,
-              new Node("number", [], { value: parseInt(a) }),
-              { name: c }
-            );
-            operations.set(name, sn);
-            prevArg = { name, sn };
-          } else {
-            let found = false;
-            a.replace(options.operationTestReg, () => {
-              found = true;
-            });
-            if (found) {
-              /// operations
-              let sn = new Node(
-                b,
-                prevArg.sn, /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
-                { name: c }
-              );
-              operations.set(a, sn);
-              prevArg.sn = sn;
-            } else {
-              /// varName
-              let name = getRandomName();
-              let sn = new Node(b, new Node("variable", [], { name: a }), {
-                name: c
-              });
-              operations.set(name, sn);
-              prevArg = { name, sn };
-            }
-          }
+          /// creating an operations with type of suffix operator,,, its arg is the prev arg
+          let name = getRandomName();
+          let sn = new Node("suffixOperator", this.__parseArg(prevArg, options, operations), {
+            id: suffix,
+          });
+          operations.set(name, sn);
+          prevArg = name;
         }
 
-        _str += `${prevArg.name} ${op} `;
+        _str += `${prevArg} ${op} `;
 
         if (prefix) {
-          let a = arg,
-            b = "prefixOperator",
-            c = prefix;
-          if (!isNaN(a)) {
-            /// number
-            let name = getRandomName();
-            let sn = new Node(
-              b,
-              new Node("number", [], { value: parseInt(a) }),
-              { name: c }
-            );
-            operations.set(name, sn);
-            prevArg = { name, sn };
-          } else {
-            let found = false;
-            a.replace(options.operationTestReg, () => {
-              found = true;
-            });
-            if (found) {
-              /// operations
-              let sn = new Node(
-                b,
-                operations.get(a), /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
-                { name: c }
-              );
-              operations.set(a, sn);
-              prevArg.sn = { name: a, sn };
-            } else {
-              /// varName
-              let name = getRandomName();
-              let sn = new Node(b, new Node("variable", [], { name: a }), {
-                name: c
-              });
-              operations.set(name, sn);
-              prevArg = { name, sn };
-            }
-          }
-        } else {
-          let found = false;
-          arg.replace(options.operationTestReg, () => {
-            found = true;
+          /// creating an operations with type of prefix operator,,, its arg is the prev arg
+          let name = getRandomName();
+          let sn = new Node("prefixOperator", this.__parseArg(arg, options, operations), {
+            id: prefix
           });
-          if (found) {
-            prevArg = { name: arg, sn: operations.get(arg) };
-          } else {
-            prevArg = { name: arg };
-          }
+          operations.set(name, sn);
+          prevArg = name;
+        } else {
+          prevArg = arg;
         }
 
         end = false;
@@ -350,56 +245,22 @@ export default class CustomMathParser {
     // final search
     if (str !== "") {
       str = str.replace(options.opFinalTestReg, (match, suffix) => {
-        let a = prevArg.name,
-          b = "suffixOperator",
-          c = suffix;
-        if (!isNaN(a)) {
-          /// number
-          let name = getRandomName();
-          let sn = new Node(b, new Node("number", [], { value: parseInt(a) }), {
-            name: c
-          });
-          operations.set(name, sn);
-          prevArg = { name, sn };
-        } else {
-          let found = false;
-          a.replace(options.operationTestReg, () => {
-            found = true;
-          });
-          if (found) {
-            /// operations
-            let sn = new Node(
-              b,
-              prevArg.sn, /// you can get it from operations but let's store it into prevArg.sn to speed our code a litte bit.
-              { name: c }
-            );
-            operations.set(a, sn);
-            prevArg.sn = { name: a, sn };
-          } else {
-            /// varName
-            let name = getRandomName();
-            let sn = new Node(b, new Node("variable", [], { name: a }), {
-              name: c
-            });
-            operations.set(name, sn);
-            prevArg = { name, sn };
-          }
-        }
-
-        _str += prevArg.name;
-
+        let name = getRandomName();
+        let sn = new Node("suffixOperator", this.__parseArg(prevArg, options, operations), {
+          id: suffix
+        });
+        operations.set(name, sn);
+        _str += name;
         return "";
       });
       if (str !== "")
         sendError("operators", "invalid suffix operator at the end", "", null);
     } else {
-      _str += prevArg.name;
+      _str += prevArg;
     }
-
     //#endregion
 
     //#region parsing operators
-
     for (let i = 0; i < options.operators.length; i++) {
       end = false;
       while (!end) {
@@ -410,39 +271,8 @@ export default class CustomMathParser {
               `(${options.argTest})\\s*(${options.operators[i].regexStr})\\s*(${options.argTest})`
             ),
             (match, g1, op, g2) => {
-              //#region argument for the operator
-              let arg1, arg2;
-              if (!isNaN(g1)) {
-                /// number
-                arg1 = new Node("number", [], { value: parseInt(g1) });
-              } else {
-                let found = false;
-                g1.replace(options.operationTestReg, () => {
-                  // operation
-                  arg1 = operations.get(g1);
-                  found = true;
-                });
-                if (!found) {
-                  /// varName
-                  arg1 = new Node("variable", [], { name: g1 });
-                }
-              }
-              if (!isNaN(g2)) {
-                /// number
-                arg2 = new Node("number", [], { value: parseInt(g2) });
-              } else {
-                let found = false;
-                g2.replace(options.operationTestReg, () => {
-                  // operation
-                  arg2 = operations.get(g2);
-                  found = true;
-                });
-                if (!found) {
-                  /// varName
-                  arg2 = new Node("variable", [], { name: g2 });
-                }
-              }
-              //#endregion
+              let arg1 = this.__parseArg(g1, options, operations),
+               arg2 = this.__parseArg(g2, options, operations);
               let name = getRandomName();
               operations.set(
                 name,
@@ -456,14 +286,14 @@ export default class CustomMathParser {
         /// if the operator is not found,,, end the while loop.
       }
     }
-
     //#endregion
 
     return _str;
   }
 
-  __parseArg(str, operations) {
+  __parseArg(str, options, operations) {
     //#region the last thing in str,,, number or name or operationName
+    let snode;
 
     // if name of operation
     str = str.replace(/^\s*(.*)\s*$/, "$1");
@@ -474,11 +304,20 @@ export default class CustomMathParser {
         value: parseFloat(str)
       });
     }
+    if (snode) return snode;
 
     // if operation name
-    str = str.replace(options.operationTestReg, opName => {
-      snode = operations.get(opName);
-    });
+    str = str.replace(
+      options.operationTestGroupedReg,
+      (match, funcName, opName) => {
+        let snode = operations.get(opName);
+        if (funcName && snode.type === 'block' && snode.name === '()') {
+          snode = new Node("functionCalling", snode.args);
+        }else if(funcName){
+          throw new Error('you have inputted a name (identifier) then an invalid block after it.');
+        }
+      }
+    );
     if (snode) return snode;
 
     // if literal (variable) or bool {true or false}, ...

@@ -277,7 +277,7 @@ export default class ProgMathParser {
 
             if (suffix) {
                /// creating an operations with type of  prefix operator,,, its arg is the prev arg
-               let a = prevArg.name,
+               let a = prevArg,
                   b = 'suffixOperator',
                   c = suffix;
                if (!isNaN(a)) {

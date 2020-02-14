@@ -1,5 +1,5 @@
 // import block from "./../../src/blocks.js";
-import MagicalParser from './../../build/index.js';
+import MagicalParser from "../../src/MagicalParser.js";
 
 // import { operationBlockChar } from '../../src/global.js';
 // const r = MagicalParser.Rules;
@@ -62,4 +62,4 @@ function PARSE(valueTOparse) {
    console.log(operations);
 }
 
-PARSE('m = sin(2*s)num!');
+PARSE('m = sin(2*s) + num!');

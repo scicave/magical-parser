@@ -49,31 +49,6 @@ export default class OperatorsParser {
 
       str = this.__parseBlocks(str, operations);
 
-      // // after processing brackets, search for functions
-      // str = str.replace(new RegExp(`(${options.nameTest})\\s*(##${options.nameTest}##)`, 'g'), (match, name, args) => {
-      //    if (options.all.prefixOperators.search(new RegExp(` \\(@(${name}),#(\\d*)\\) `)) > -1) {
-      //       // let _arg = operations.get(args);
-      //       // let sn = new sNode('prefixOperator', _arg, { name });
-      //       // operations.set(name, sn);
-      //       return match;
-      //    } else {
-      //       let _args = operations.get(args);
-      //       if (_args.calls('()')) {
-      //          if (options.vars.find(a => a === name)) {
-      //             let sn = new Node('operator', [new Node('var', [], { name }), _args], { name: '*' });
-      //             operations.set(args, sn);
-      //             return name + ' * ' + args;
-      //          }
-
-      //          let sn = new Node('implementFunction', _args.args, { name });
-      //          operations.set(args, sn);
-      //          return args; /// replace "name ##funcArrgsName##" with "##funcArrgsName##" + setting the value to the corresponding key in "operations"
-      //       } else {
-      //          return match;
-      //       }
-      //    }
-      // });
-
       for (let i = 0; i < options.rulesRegex.length; i++) {
          str = str.replace(options.rulesRegex[i], () => {
             return

@@ -141,8 +141,8 @@ export function sendError(type, msg, str = "", pos = undefined) {
 
 export function prepareOptions(options) {
   let defaultOptions = {
-    // nameTest: '[_a-zA-Z]+\\d*',
-    // numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
+    nameTest: '[_a-zA-Z]+\\d*',
+    numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
     rules: [],
 
     operators: [],
@@ -252,14 +252,16 @@ export function prepareOptions(options) {
     options.rulesRegex.push(new RegExp(rule.getRegex()));
   });
 
-  options.nameTestReg = new RegExp(options.nameTestReg);
-  options.numTestReg = new RegExp(options.numTestReg);
+  options.nameTestReg = new RegExp(options.nameTest);
+  options.numTestReg = new RegExp(options.numTest);
 
-  options.operationTest =
-    operationBlockChar + options.nameTest + operationBlockChar;
+  options.operationTestGrouped = `(?:(${options.nameTest})\\s*)?(` + operationBlockChar + options.nameTest + operationBlockChar + ')';
+  options.operationTestGroupedReg = new RegExp(options.operationTestGrouped);
+
+  options.operationTest = `(?:${options.nameTest}\\s*)?` + operationBlockChar + options.nameTest + operationBlockChar;
   options.operationTestReg = new RegExp(options.operationTest);
 
-  options.argTest = `${options.nameTest}|${options.numTest}|${options.operationTest}`;
+  options.argTest = `${options.nameTest}(?:\\s*${operationBlockChar + options.nameTest + operationBlockChar})?|${options.numTest}|${options.operationTest}`;
   options.argTestReg = new RegExp(options.argTestReg);
 
   options.opTestReg = new RegExp(
@@ -273,6 +275,8 @@ export function prepareOptions(options) {
   );
 
   //#endregion
+
+  return options;
 }
 
 export function contains(str, containedStr) {
