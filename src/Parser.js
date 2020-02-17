@@ -1,9 +1,14 @@
 import { regSpecialChars, operationBlockChar } from '../src/global.js';
+import Grammer from './Grammer.js';
+import Rule from './rules/Rule.js';
 export default class Parser {
    constructor(grammer) {
-      this.grammer = grammer;
+      this.grammer = grammer instanceof Grammer ? grammer : grammer instanceof Rule ? new Grammer(grammer) : grammer;
+      this.blockState = !grammer.blocks || grammer.blocks.length === 0; // on this.prepareRegex();, if any Block Rule can't be searched as regex, this will be true
+
       this.matchesTest = new RegExp(`(${operationBlockChar}\\w+${operationBlockChar})${operationBlockChar}(\\d+)${operationBlockChar}`, 'g');
       this.matches = [];
+
       //#region seting the rootParser
       let setRootParser = (rule) => {
          rule.rootParser = this;
@@ -12,11 +17,6 @@ export default class Parser {
          }
       };
       setRootParser(this.grammer);
-      //#endregion
-
-      //#region Block Rule No Regex For Search
-      this.blocksRules = []; // this will be filled with the Block Rules in the grammer that can't be searched as regex
-      this.blockState = false; // on this.prepareRegex();, if any Block Rule can't be searched as regex, this will be true
       //#endregion
 
       this.prepareRegex();
@@ -131,7 +131,8 @@ export default class Parser {
             groups = arguments;
          });
          if (!groups) throw new Error("your code doesn't match");
-         groups = [...groups]; groups.pop(); groups.pop();
+         // groups = [...groups]; 
+         groups.pop(); groups.pop();
          //#endregion
 
          return this.grammer.parse(groups);

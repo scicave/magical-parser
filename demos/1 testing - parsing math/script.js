@@ -62,4 +62,4 @@ function PARSE(valueTOparse) {
    console.log(operations);
 }
 
-PARSE('m = sin(2*s) + num!');
+PARSE('m = sin(2*s, 100) + tanh(num)!');

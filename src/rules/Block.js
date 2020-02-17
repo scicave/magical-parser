@@ -9,7 +9,7 @@ export default class Block extends Rule {
     * @param {Object} properties 
     * you should set 
     * opening as regex or string, closing as RegExp or string,
-    * [optional] (content as Rule or regex or string),
+    * [optional] content: Rule or regex or string,
     * [optional] parser: to be used for parsing the content
     */
    constructor(properties) {

@@ -32,7 +32,7 @@ export default class Block {
             if (val.content instanceof RegExp) {
                val.content = val.content.source;
             } else if (val.content === 'all') {
-               val.content = '(?:.*?|\\s*)*';
+               val.content = '(?:.*?|\\s*)*?';
             } else {
                val.content = regSpecialChars(val.content);
             }

@@ -43,8 +43,12 @@ export default class Node {
       return this.type === 'literal';
    }
 
-   calls(type, argsCount = this.args.length, type_ = this.type) {
-      return (this.type === type || (this.type === 'func' && this.name === type) || (this.type === 'op' && this.name === type)) && this.args.length === argsCount && this.type === type_;
+   calls(props, argsCount = this.args.length) {
+      for (let prop in props) {
+         if (this[prop] !== props[prop]) return false;
+      }
+      return true;
+      // return (this.type === type || (this.type === 'op' && this.name === type)) && this.args.length === argsCount && this.type === type_;
    }
 
 }

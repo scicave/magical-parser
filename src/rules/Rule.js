@@ -1,3 +1,5 @@
+import Block from "./Block.js";
+
 export default class Rule {
 
 
@@ -32,5 +34,15 @@ export default class Rule {
       throw new Error("You mustn't call this function directly from the abstract class Rule.");
    }
 
+   getBlocksInside() {
+      if (this instanceof Block) {
+         return [rule];
+      }
+      let blocks = [];
+      for (let child of this.children) {
+         blocks.concat(child.getBlocksInside());
+      }
+      return blocks;
+   }
 
 }

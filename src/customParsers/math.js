@@ -167,7 +167,7 @@ export default class CustomMathParser {
     //#region separators
     for (let s of options.separators) {
       if (contains(str, s.id)) {
-        let name = this.getRandomName();
+        let name = getRandomName();
         let args = [];
         let strs = str.split(s);
         for (let str_ of strs) {
@@ -176,7 +176,8 @@ export default class CustomMathParser {
         operations.set(
           name,
           new Node("separator", args, { name: s.name, length: args.length })
-        );
+         );
+         return name;
       }
     }
     //#endregion
@@ -192,7 +193,7 @@ export default class CustomMathParser {
       if (prefix) {
         let name = getRandomName();
         let sn = new Node("prefixOperator", this.__parseArg(arg, options, operations), {
-          id: prefix,
+          name: prefix,
           match: match,
         });
         operations.set(name, sn);
@@ -217,7 +218,7 @@ export default class CustomMathParser {
           /// creating an operations with type of suffix operator,,, its arg is the prev arg
           let name = getRandomName();
           let sn = new Node("suffixOperator", this.__parseArg(prevArg, options, operations), {
-            id: suffix,
+            name: suffix,
           });
           operations.set(name, sn);
           prevArg = name;
@@ -229,7 +230,7 @@ export default class CustomMathParser {
           /// creating an operations with type of prefix operator,,, its arg is the prev arg
           let name = getRandomName();
           let sn = new Node("prefixOperator", this.__parseArg(arg, options, operations), {
-            id: prefix
+            name: prefix
           });
           operations.set(name, sn);
           prevArg = name;
@@ -247,7 +248,7 @@ export default class CustomMathParser {
       str = str.replace(options.opFinalTestReg, (match, suffix) => {
         let name = getRandomName();
         let sn = new Node("suffixOperator", this.__parseArg(prevArg, options, operations), {
-          id: suffix
+          name: suffix
         });
         operations.set(name, sn);
         _str += name;
@@ -310,9 +311,9 @@ export default class CustomMathParser {
     str = str.replace(
       options.operationTestGroupedReg,
       (match, funcName, opName) => {
-        let snode = operations.get(opName);
+        snode = operations.get(opName);
         if (funcName && snode.type === 'block' && snode.name === '()') {
-          snode = new Node("functionCalling", snode.args);
+          snode = new Node("functionCalling", snode.args, {name: funcName});
         }else if(funcName){
           throw new Error('you have inputted a name (identifier) then an invalid block after it.');
         }
