@@ -129,7 +129,7 @@ export function sendError(type, msg, str = "", pos = undefined) {
 
   switch (type) {
     case "forbiddenChars":
-      throw new Errors.forbiddenCharsError(msg);
+      throw new Errors.forbiddenSymbolsError(msg);
     case "operators":
       throw new Errors.operatorsError(msg);
     case "blocks":
