@@ -4,6 +4,7 @@ import { getGroupsNumInReg, getRandomName, regSpecialChars, operationBlockChar }
 import Parser from '../Parser.js';
 
 export default class Block extends Rule {
+   
    /**
     * 
     * @param {Object} properties 
@@ -29,7 +30,7 @@ export default class Block extends Rule {
                properties.content = properties.content.source;
             } else {
                /// evaluating special values such as "all".
-               properties.content = (properties.content === 'all') ? '(?:.*?|\\s)*?' : regSpecialChars(properties.content);
+               properties.content = (properties.content === 'all') ? '(?:.|\\s)*?' : regSpecialChars(properties.content);
             }
             properties.groupsNumInside += getGroupsNumInReg(properties.content);
          }
@@ -68,7 +69,7 @@ export default class Block extends Rule {
          this.rootParser.blocksRules.push(this);
          this.rootParser.blockState = true;
 
-         this.matchIdRegex = new RegExp(`${this.id}${operationBlockChar}\\d+${operationBlockChar}`); // the represetig string in the total string
+         this.matchIdRegex = new RegExp(`${this.id}${operationBlockChar}\\d+${operationBlockChar}`); // the representing string in the total string
          return `(${this.matchIdRegex.source})`;
       } else {
          groubIndex = groubIndex || {
@@ -140,7 +141,5 @@ export default class Block extends Rule {
          });
       }
    }
-
-
 
 }

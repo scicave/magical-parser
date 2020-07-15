@@ -1,7 +1,7 @@
 import { Operator, Separator, PrefixOperator, SuffixOperator } from '../tokens/Operators.js';
 import block from '../tokens/Block.js';
 import Node from '../Node.js';
-import { prepareOptions, sendError, contains, getRandomName } from '../global.js';
+import { sendError, contains, getRandomName } from '../global.js';
 
 export default class ProgMathParser {
 
@@ -65,11 +65,11 @@ export default class ProgMathParser {
          ],
 
          blocks: [
-            new block({ id: { openingChar: '{', closingChar: '}' } }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
-            new block({ id: { openingChar: '[', closingChar: ']' } }),
-            new block({ id: { openingChar: '(', closingChar: ')' } }),
-            new block({ id: { openingChar: '"', closingChar: '"' } }),
-            new block({ id: { openingChar: "'", closingChar: "'" } })
+            new block({ id: { opening: '{', closing: '}' } }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
+            new block({ id: { opening: '[', closing: ']' } }),
+            new block({ id: { opening: '(', closing: ')' } }),
+            new block({ id: { opening: '"', closing: '"' } }),
+            new block({ id: { opening: "'", closing: "'" } })
          ],
 
          forbiddenChars: [],
@@ -106,7 +106,7 @@ export default class ProgMathParser {
    __parse(str, options, operations, subOptions = {}) {
 
       let snode;
-      subOptions = { parseBlocks: true, parseOperators: true, ...subOptions }; /// or use Object.assign
+      subOptions = Object.assign({ parseBlocks: true, parseOperators: true }, subOptions); /// or use Object.assign
 
       //#region parsing
 

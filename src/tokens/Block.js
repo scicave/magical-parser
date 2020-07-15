@@ -6,19 +6,18 @@ import { regSpecialChars } from '../global.js';
 export default class Block {
 
    constructor(options = {}) {
-      options = {
-        parser: 'inherit',
-        ...options
-      };
+      options = Object.assign({ parser: 'inherit' }, options); // put parser = 'inherit' as default, otherwise the specified value
       Object.assign(this, options);
-
+      if (!this.opening || !this.closing) throw new Error('you must set the opening and the closing of the block');
       // these properties are deprecated and algorithms was enhanced :._.:
-      this.opened = false; 
+      this.opened = false;
       this.num = 0;
    }
+
    get id() {
       return this._id;
    }
+
    set id(val) {
       if (val instanceof RegExp) {
          this._id = val;
@@ -26,6 +25,9 @@ export default class Block {
          this.regexStr = val.source;
       } else if (val instanceof Object) {
          this._id = val;
+         this.opening = this.id.opening;
+         this.closing = this.id.closing;
+         
          if (val.opening && val.closing) {
 
             val.content = val.content || 'all';
@@ -46,19 +48,15 @@ export default class Block {
          this.regexStr = this.regex.source;
       }
       // settingthe regex to be global
-      if (!this.regex.global) this.regex = new RegExp(this.regex.source, this.regex.flags + 'g');
+      if (!this.regex.global) this.regex = new RegExp(this.regex.source, (this.regex.flags || '') + 'g');
    }
 
-   get name(){
-      if(this._name) return this._name;
-      if(this.id instanceof Object){
-         return this.id.opening + this.id.closing; 
-      }else{
-         return null;
-      }
+   get name() {
+      if (!this._name) return this.opening + this.closing;
+      else return this._name;
    }
-   set name(value){
-      this._name = value;
+   set name(name) {
+      this._name = name;
    }
 
    get content() {

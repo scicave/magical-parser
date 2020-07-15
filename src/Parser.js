@@ -103,7 +103,7 @@ export default class Parser {
                };
                let matches = [];
                getMatches(str, matches);
-               this.matches = { ... this.matches, [block.id]: matches };
+               this.matches[block.id] = matches;
                for (let i = 0; i < matches.length; i++) {
                   // there is matched string in the "str"
                   if (block.realRegex.test(matches[i].str)) {

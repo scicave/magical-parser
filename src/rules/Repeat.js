@@ -3,10 +3,7 @@ import Node from '../Node.js';
 
 export default class Repeat extends Rule {
    constructor(childRule, properties) {
-      properties = {
-         spaced: true,
-         ...properties
-      };
+      properties = Object.assign({ spaced: true }, properties);
       super('Repeat', 1, [childRule], properties);
    }
 

@@ -43,12 +43,23 @@ export default class Node {
       return this.type === 'literal';
    }
 
-   calls(props, argsCount = this.args.length) {
+   check(props, argsCount = this.args.length) {
       for (let prop in props) {
          if (this[prop] !== props[prop]) return false;
       }
       return true;
       // return (this.type === type || (this.type === 'op' && this.name === type)) && this.args.length === argsCount && this.type === type_;
+   }
+
+   contains(check) {
+      if(this.check(check)){
+         return true;
+      }
+      if(this.args)
+         for (let i = 0; i < this.args.length; i++){
+            if (this.args[i].contains(check)) return true;
+         }
+      return false;
    }
 
 }

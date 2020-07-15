@@ -1,10 +1,11 @@
 {
   "name": "magical-parser",
   "version": "1.0.0",
+  "mode": "production",
   "description": "Parser for programming languages, used to analyze their structures, axiomatically you can use it to parse math expressions.\n Morevoer you can create your own structure to parse your text.",
   "main": "./src/index.js",
   "scripts": {
-    "webpack": "./node_modules/.bin/parallel-webpack"
+    "build": "npx parallel-webpack"
   },
   "repository": {
     "type": "git",
@@ -32,6 +33,7 @@
     "babel-loader": "^8.0.6",
     "parallel-webpack": "^2.4.0",
     "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10"
+    "webpack-cli": "^3.3.10",
+    "webpack-dev-server": "^3.11.0"
   }
 }

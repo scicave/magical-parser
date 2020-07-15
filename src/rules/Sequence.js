@@ -2,10 +2,7 @@ import Rule from './Rule.js';
 import Node from '../Node.js';
 export default class Sequence extends Rule {
    constructor(childrenRules, properties) {
-      properties = {
-         spaced: true,
-         ...properties
-      };
+      properties = Object.assign({ spaced: true }, properties);
       if (childrenRules.length == 0) throw new Error('Sequence musn\t be void.');
       super('Sequence', -1, childrenRules, properties);
    }

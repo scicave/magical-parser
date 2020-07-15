@@ -7,13 +7,15 @@ import {
 import Block from "../tokens/Block.js";
 import Node from "../Node.js";
 import {
-  prepareOptions,
   sendError,
   contains,
-  getRandomName
+  getRandomName,
+  specialChars,
+  operationBlockChar
 } from "../global.js";
 
 export default class CustomMathParser {
+
   constructor(options) {
     this._options = {
       autoMultSign: true,
@@ -33,7 +35,9 @@ export default class CustomMathParser {
       ],
 
       operators: [
-        new Operator({ id: "^", zIndex: 10 }), // the first operator to process
+        new Operator({ id: ".", zIndex: 11 }), // the first operator to process
+        new Operator({ id: "^", zIndex: 10 }), // the 2nd operator to process
+        new Operator({ id: "**", zIndex: 10 }), // the 2nd operator to process
         new Operator({ id: "*", zIndex: 9 }),
         new Operator({ id: "/", zIndex: 9 }),
         new Operator({ id: "mod", zIndex: 9 }),
@@ -69,25 +73,177 @@ export default class CustomMathParser {
       separators: [new Separator({ id: ";" }), new Separator({ id: "," })],
 
       blocks: [
-        new Block({ id: { opening: "{", closing: "}" } }), /// multiNodable used to know whether or not the bracket block can have multiNode seperated be something like comma ","
-        new Block({ id: { opening: "[", closing: "]" } }), // []
-        new Block({ id: { opening: "(", closing: ")" } }), // ()
-        new Block({ id: /"(.*?|\\")*"/ }), /// string: ""
-        new Block({ id: /'(.*?|\\')*'/ }) /// string: ''
+        new Block({ id: /\(([^(]*?)\)/, opening: '(', closing: ')' }),
+        new Block({ id: /\{([^{]*?)\}/, opening: '{', closing: '}' }),
+        new Block({ id: /\[([^[]*?)\]/, opening: '[', closing: ']' }),
+        new Block({ id: /"(.*?|\\")*"/, opening: '"', closing: '"' }), /// string: ""
+        new Block({ id: /'(.*?|\\')*'/, opening: "'", closing: "'" }) /// string: ''
       ],
 
       forbiddenChars: []
     };
-    this.options = {...this._options, ...(options || {})};
+    this.options = Object.assign(this._options, (options || {}));
   }
+
+  //#region options
 
   get options() {
     return this._options;
   }
 
   set options(options) {
-    this._options = prepareOptions(options);
+    this._options = this.prepareOptions(options);
   }
+
+  prepareOptions(options) {
+    let defaultOptions = {
+      nameTest: '[_a-zA-Z]+\\d*',
+      numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
+
+      operators: [],
+      suffixOperators: [],
+      prefixOperators: [],
+      separators: [],
+
+      blocks: [],
+      rules: [],
+
+      forbiddenChars: []
+    };
+    
+    options = Object.assign(defaultOptions, options);
+    options.forbiddenChars = [...options.forbiddenChars, ...specialChars];
+
+    //#region all
+
+    //#region string
+
+    let all = {
+      operators: "",
+      prefixOperators: "",
+      suffixOperators: ""
+    };
+
+    let processArr = arr => {
+      if (arr && arr.length > 0) {
+        let _all = " ";
+        for (let i = 0; i < arr.length; i++) {
+          let op = arr[i];
+          let repeated = false;
+          _all.replace(
+            new RegExp(`\\(@(${op.regexStr})#(\\d*)\\)`),
+            (match, opName, opIndex) => {
+              Object.assign(arr[i], arr[parseInt(opIndex)]); // merging the repeated operators
+              arr.splice(parseInt(opIndex), 1); // removing the previous operator wiht the same name
+              repeated = true;
+              return ` (@${op.toString()},#${i}) `;
+            }
+          );
+          if (!repeated) _all += `(@${op.regexStr}#${i})`;
+        }
+        return _all;
+      }
+    };
+
+    all.operators = processArr(options.operators);
+    all.prefixOperators = processArr(options.prefixOperators);
+    all.suffixOperators = processArr(options.suffixOperators);
+
+    options.all = all;
+
+    //#endregion
+
+    //#region regex
+
+    all = {
+      operators: "",
+      prefixOperators: "",
+      suffixOperators: ""
+    };
+
+    processArr = arr => {
+      if (arr.length == 0) return "";
+      if (arr && arr.length > 0) {
+        let _all = "";
+        for (let i = 0; i < arr.length; i++) {
+          let op = arr[i];
+          // let repeated = false; /// it is done in string
+          _all += `${op.regexStr}|`;
+        }
+        return _all.slice(0, -1);
+      }
+    };
+
+    all.operators = processArr(options.operators);
+    all.prefixOperators = processArr(options.prefixOperators);
+    all.suffixOperators = processArr(options.suffixOperators);
+
+    options.allRegex = all;
+
+    //#endregion
+
+    //#endregion
+
+    //#region final steps
+
+    // sort the array to be inversely according to zIndex property.
+    if (options.operators)
+      options.operators = options.operators.sort(function (a, b) {
+        return -(a.zIndex - b.zIndex); // the negative sign is for reverse the array;
+      });
+
+    options.blocks = {
+      values: options.blocks,
+      openedBlock: null
+    };
+
+    //#endregion
+
+    //#region regex for search
+
+    options.rulesRegex = [];
+
+    options.rules.forEach(rule => {
+      options.rulesRegex.push(new RegExp(rule.getRegex()));
+    });
+
+    options.nameTestReg = new RegExp(options.nameTest);
+    options.numTestReg = new RegExp(options.numTest);
+
+    options.matchedTest = operationBlockChar + '\\w+' + operationBlockChar;
+    options.matchedTestReg = new RegExp(options.matchedTest, 'g');
+
+    options.operationTestGrouped = `(?:(${options.nameTest})\\s*)?(` + options.matchedTest + ')';
+    options.operationTestGroupedReg = new RegExp(`^\\s*${options.operationTestGrouped}\\s*$`);
+
+    options.operationTest = `(?:${options.nameTest}\\s*)?` + options.matchedTest;
+    options.operationTestReg = new RegExp(`^\\s*${options.operationTest}\\s*$`);
+    
+    options.argTest = `${options.nameTest}(?:\\s*${options.matchedTest})?|${options.numTest}|${options.operationTest}`;
+    options.argTestReg = new RegExp(`^\\s*(${options.argTest})\\s*$`);
+
+    options.opTestReg = new RegExp(
+      `^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`
+    );
+    options.opIntialTestReg = new RegExp(
+      `^\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})`
+    );
+    options.opFinalTestReg = new RegExp(
+      `^\\s*(${options.allRegex.suffixOperators})\\s*$`
+    );
+
+    options.getMatchedString = function (str, operations) {
+      return str.replace(options.matchedTestReg, (name) => {
+        return operations.get(name).match;
+      });
+    };
+
+    //#endregion
+
+    return options;
+  }
+
+  //#endregion
 
   parse(str, operations = null) {
     var options = this.options;
@@ -107,12 +263,12 @@ export default class CustomMathParser {
   }
 
   __parse(str, options, operations, subOptions = {}) {
-    subOptions = { parseBlocks: true, parseOperators: true, ...subOptions }; /// or use Object.assign
+    subOptions = Object.assign({ parseBlocks: true, parseOperators: true }, subOptions); /// or use Object.assign
 
     // if empty of characters
     let snode;
     str = str.replace(/^\s*$/, () => {
-      snode = new Node("");
+      snode = new Node("", [], {match: str});
     });
     if (snode) return snode;
 
@@ -122,8 +278,9 @@ export default class CustomMathParser {
     if (subOptions.parseOperators) {
       str = this.__parseOperators(str, options, operations);
     }
-
-    return this.__parseArg(str, options, operations);
+    let returnedValue = this.__parseArg(str, options, operations);
+    returnedValue.match = returnedValue.match || options.getMatchedString(str, operations);
+    return returnedValue;
   }
 
   /**
@@ -134,6 +291,8 @@ export default class CustomMathParser {
     var blocks = options.blocks;
 
     let b;
+    let end; // for while loop in replacing
+    
     let repBlock = (match, content) => {
       let name = getRandomName();
       let args = [];
@@ -146,17 +305,23 @@ export default class CustomMathParser {
       }
       let sn = new Node("block", args, {
         name: b.name,
-        match,
-        content
+        match: options.getMatchedString(match, operations),
+        content: options.getMatchedString(content, operations)
       });
       operations.set(name, sn);
+      end = false;
       return name;
     };
 
     for (let i = 0; i < blocks.values.length; i++) {
       b = blocks.values[i];
-      str = str.replace(b.regex, repBlock);
+      end = false;
+      while (!end) {
+        end = true;
+        str = str.replace(b.regex, repBlock);
+      }
     }
+
     return str;
   }
 
@@ -175,7 +340,11 @@ export default class CustomMathParser {
         }
         operations.set(
           name,
-          new Node("separator", args, { name: s.name, length: args.length })
+          new Node("separator", args, {
+            name: s.name,
+            length: args.length, 
+            match: options.getMatchedString(str, operations)
+          })
          );
          return name;
       }
@@ -194,7 +363,7 @@ export default class CustomMathParser {
         let name = getRandomName();
         let sn = new Node("prefixOperator", this.__parseArg(arg, options, operations), {
           name: prefix,
-          match: match,
+          match: options.getMatchedString(match, operations),
         });
         operations.set(name, sn);
         prevArg = name;
@@ -219,6 +388,7 @@ export default class CustomMathParser {
           let name = getRandomName();
           let sn = new Node("suffixOperator", this.__parseArg(prevArg, options, operations), {
             name: suffix,
+            match: options.getMatchedString(prevArg + suffix, operations)
           });
           operations.set(name, sn);
           prevArg = name;
@@ -230,7 +400,8 @@ export default class CustomMathParser {
           /// creating an operations with type of prefix operator,,, its arg is the prev arg
           let name = getRandomName();
           let sn = new Node("prefixOperator", this.__parseArg(arg, options, operations), {
-            name: prefix
+            name: prefix,
+            match: options.getMatchedString( prefix + arg, operations)
           });
           operations.set(name, sn);
           prevArg = name;
@@ -248,7 +419,8 @@ export default class CustomMathParser {
       str = str.replace(options.opFinalTestReg, (match, suffix) => {
         let name = getRandomName();
         let sn = new Node("suffixOperator", this.__parseArg(prevArg, options, operations), {
-          name: suffix
+          name: suffix,
+          match: options.getMatchedString(prevArg + match, operations)
         });
         operations.set(name, sn);
         _str += name;
@@ -260,31 +432,38 @@ export default class CustomMathParser {
       _str += prevArg;
     }
     //#endregion
+    
+    end = options.argTestReg.test(_str);
 
     //#region parsing operators
-    for (let i = 0; i < options.operators.length; i++) {
-      end = false;
-      while (!end) {
-        end = true;
-        if (contains(_str, options.operators[i].id)) {
-          _str = _str.replace(
-            new RegExp(
-              `(${options.argTest})\\s*(${options.operators[i].regexStr})\\s*(${options.argTest})`
-            ),
-            (match, g1, op, g2) => {
-              let arg1 = this.__parseArg(g1, options, operations),
-               arg2 = this.__parseArg(g2, options, operations);
-              let name = getRandomName();
-              operations.set(
-                name,
-                new Node("operator", [arg1, arg2], { name: op })
-              );
-              end = false;
-              return name;
-            }
-          );
+    if (!end) {
+      for (let i = 0; i < options.operators.length; i++) {
+        end = false;
+        while (!end) {
+          end = true;
+          if (contains(_str, options.operators[i].id)) {
+            _str = _str.replace(
+              new RegExp(
+                `(${options.argTest}) (${options.operators[i].regexStr}) (${options.argTest})`
+              ),
+              (match, g1, op, g2) => {
+                let arg1 = this.__parseArg(g1, options, operations),
+                  arg2 = this.__parseArg(g2, options, operations);
+                let name = getRandomName();
+                operations.set(
+                  name,
+                  new Node("operator", [arg1, arg2], {
+                    name: op,
+                    match: options.getMatchedString(match, operations)
+                  })
+                );
+                end = false;
+                return name;
+              }
+            );
+          }
+          /// if the operator is not found,,, end the while loop.
         }
-        /// if the operator is not found,,, end the while loop.
       }
     }
     //#endregion
@@ -302,7 +481,8 @@ export default class CustomMathParser {
     /// if number
     if (!isNaN(str)) {
       snode = new Node("number", [], {
-        value: parseFloat(str)
+        value: parseFloat(str),
+        match: str,
       });
     }
     if (snode) return snode;
@@ -313,7 +493,13 @@ export default class CustomMathParser {
       (match, funcName, opName) => {
         snode = operations.get(opName);
         if (funcName && snode.type === 'block' && snode.name === '()') {
-          snode = new Node("functionCalling", snode.args, {name: funcName});
+          if (options.vars.find(v => v === funcName)) {
+            //
+          }
+          snode = new Node("functionCalling", snode.args, {
+            name: funcName,
+            match: options.getMatchedString(match, operations)
+          });
         }else if(funcName){
           throw new Error('you have inputted a name (identifier) then an invalid block after it.');
         }
@@ -323,7 +509,7 @@ export default class CustomMathParser {
 
     // if literal (variable) or bool {true or false}, ...
     str = str.replace(options.nameTestReg, name => {
-      snode = new Node("variable", [], { name });
+      snode = new Node("variable", [], { name, match: str});
     });
     if (snode) return snode;
 

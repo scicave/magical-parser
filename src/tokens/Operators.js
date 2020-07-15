@@ -9,7 +9,7 @@ export class commonOperator {
     */
    constructor(options) {
       options = options || {};
-      options = { zIndex: 0, ...options }; // overriding default options by the passed options (options argument)
+      options = Object.assign({ zIndex: 0 }, options); // overriding default options by the passed options (options argument)
       Object.assign(this, options);
    }
 

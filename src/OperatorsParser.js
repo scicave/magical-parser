@@ -9,16 +9,162 @@
  */
 
 // import sNode from './sNode';
-import environments from './environments.js';
 import Node from './Node.js';
-import { checker, sendError, prepareOptions, getRandomName, contains } from './global.js';
+import { checker, sendError, getRandomName, contains } from './global.js';
 import { Operator, Separator, PrefixOperator, SuffixOperator } from './tokens/Operators.js';
 
 export default class OperatorsParser {
 
    constructor(options = {}) {
       this.options = options;
-      prepareOptions(options);
+      this.prepareOptions(options);
+   }
+
+   prepareOptions(options) {
+      let defaultOptions = {
+         nameTest: '[_a-zA-Z]+\\d*',
+         numTest: '\\d*\\.?\\d+|\\d+\\.?\\d*',
+         blocks: [],
+         args: [],
+
+         operators: [],
+         suffixOperators: [],
+         prefixOperators: [],
+         separators: [],
+
+         forbiddenChars: []
+      };
+
+      options = Object.assign(defaultOptions, options);
+      options.forbiddenChars = [...options.forbiddenChars, ...specialChars];
+
+      //#region all
+
+      //#region string
+
+      let all = {
+         operators: "",
+         prefixOperators: "",
+         suffixOperators: ""
+      };
+
+      let processArr = arr => {
+         if (arr && arr.length > 0) {
+            let _all = " ";
+            for (let i = 0; i < arr.length; i++) {
+               let op = arr[i];
+               let repeated = false;
+               _all.replace(
+                  new RegExp(`\\(@(${op.regexStr})#(\\d*)\\)`),
+                  (match, opName, opIndex) => {
+                     Object.assign(arr[i], arr[parseInt(opIndex)]); // merging the repeated operators
+                     arr.splice(parseInt(opIndex), 1); // removing the previous operator wiht the same name
+                     repeated = true;
+                     return ` (@${op.toString()},#${i}) `;
+                  }
+               );
+               if (!repeated) _all += `(@${op.regexStr}#${i})`;
+            }
+            return _all;
+         }
+      };
+
+      all.operators = processArr(options.operators);
+      all.prefixOperators = processArr(options.prefixOperators);
+      all.suffixOperators = processArr(options.suffixOperators);
+
+      options.all = all;
+
+      //#endregion
+
+      //#region regex
+
+      all = {
+         operators: "",
+         prefixOperators: "",
+         suffixOperators: ""
+      };
+
+      processArr = arr => {
+         if (arr.length == 0) return "";
+         if (arr && arr.length > 0) {
+            let _all = "";
+            for (let i = 0; i < arr.length; i++) {
+               let op = arr[i];
+               // let repeated = false; /// it is done in string
+               _all += `${op.regexStr}|`;
+            }
+            return _all.slice(0, -1);
+         }
+      };
+
+      all.operators = processArr(options.operators);
+      all.prefixOperators = processArr(options.prefixOperators);
+      all.suffixOperators = processArr(options.suffixOperators);
+
+      options.allRegex = all;
+
+      //#endregion
+
+      //#endregion
+
+      //#region final steps
+
+      // sort the array to be inversely according to zIndex property.
+      if (options.operators)
+         options.operators = options.operators.sort(function (a, b) {
+            return -(a.zIndex - b.zIndex); // the negative sign is for reverse the array;
+         });
+
+      options.blocks = {
+         values: options.blocks,
+         openedBlock: null
+      };
+
+      //#endregion
+
+      //#region regex for search
+
+      options.rulesRegex = [];
+
+      options.rules.forEach(rule => {
+         options.rulesRegex.push(new RegExp(rule.getRegex()));
+      });
+
+      options.nameTestReg = new RegExp(options.nameTest);
+      options.numTestReg = new RegExp(options.numTest);
+
+      options.operationTestGrouped = `(?:(${options.nameTest})\\s*)?(` + operationBlockChar + options.nameTest + operationBlockChar + ')';
+      options.operationTestGroupedReg = new RegExp(`^\\s*${options.operationTestGrouped}\\s*$`);
+
+      options.operationTest = `(?:${options.nameTest}\\s*)?` + operationBlockChar + options.nameTest + operationBlockChar;
+      options.operationTestReg = new RegExp(`^\\s*${options.operationTest}\\s*$`);
+
+      options.matchedTest = operationBlockChar + options.nameTest + operationBlockChar;
+      options.matchedTestReg = new RegExp(options.matchedTest, 'g');
+
+      options.argTest = `${options.nameTest}(?:\\s*${operationBlockChar + options.nameTest + operationBlockChar})?|${options.numTest}|${options.operationTest}`;
+      options.argTestReg = new RegExp(`^\\s*(${options.argTest})\\s*$`);
+
+      options.opTestReg = new RegExp(
+         `^\\s*(${options.allRegex.suffixOperators})?\\s*(${options.allRegex.operators})\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})\\s*`
+      );
+      options.opIntialTestReg = new RegExp(
+         `^\\s*(${options.allRegex.prefixOperators})?\\s*(${options.argTest})`
+      );
+      options.opFinalTestReg = new RegExp(
+         `^\\s*(${options.allRegex.suffixOperators})\\s*$`
+      );
+
+      options.getMatchedString = function (str, operations) {
+         return str.replace(options.matchedTestReg, (name) => {
+            return operations.get(name).match;
+         });
+      };
+
+      //#endregion
+
+      return options;
    }
 
    /**
@@ -65,7 +211,7 @@ export default class OperatorsParser {
 
    __parse(str, options, operations, subOptions = {}) {
 
-      subOptions = { parseBlocks: true, parseOperators: true, ...subOptions }; /// or use Object.assign
+      subOptions = Object.assign({ parseBlocks: true, parseOperators: true }, subOptions); /// or use Object.assign
       let snode;
 
       if (subOptions.parseBLocks) {
@@ -444,9 +590,9 @@ export default class OperatorsParser {
    //       //// checking error,,, this ill be done on handling bracket's content, so don't do for this. 
    //       let name = getRandomName();
 
-   //       // let str_ = str.slice(index.opening, index.closing); /// cut the text from the next sibiling of the opening char until the current closingChar index
+   //       // let str_ = str.slice(index.opening, index.closing); /// cut the text from the next sibiling of the opening char until the current closing index
    //       let b = blocks.openedBlock.ref;
-   //       let searchingTxt = b.openingChar + str_ + b.closingChar;
+   //       let searchingTxt = b.opening + str_ + b.closing;
    //       str = str.replace(searchingTxt, name); // if the replacement is global or not, there will no be any problem unless the developer using this library set a block with the same features as the bolck of our operation name.
 
    //       let childArg;
@@ -455,7 +601,7 @@ export default class OperatorsParser {
    //       } else {
    //          childArg = new Node('undefined', [], { content: str_ }); /// getting the sNode from the string inside this bracket block with the same procedures, there is no need to pass operations as argument
    //       }
-   //       let sn = new Node('block', [childArg], { openingChar: b.openingChar, closingChar: b.closingChar, name: b.name });
+   //       let sn = new Node('block', [childArg], { opening: b.opening, closing: b.closing, name: b.name });
    //       operations.set(name, sn);
 
    //       b.opened = false; blocks.openedBlock = null; // reset
@@ -469,12 +615,12 @@ export default class OperatorsParser {
    //          for (let b of blocks) {
    //             /// if a block is opened, closing has the priority, unless, opening has the priority::: you can notice this in ***Mohammed***, if you check the opening char first the num will increase to 2, thus the block will not be closed,,, and an error will occur.
    //             if (blocks.openedBlock) {
-   //                if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
+   //                if (str.slice(i, i + b.closing.length) === b.closing) {
    //                   if (b !== options.blocks.openedBlock.ref) {
 
-   //                      let iof = options.blocks.openedBlock.ref.openingChar.indexOf(b.openingChar);
+   //                      let iof = options.blocks.openedBlock.ref.opening.indexOf(b.opening);
    //                      if (iof > -1) {
-   //                         // options.blocks.openedBlock.ref.openingChar  contains  b.closingChar::: for example *** contains **, you can use these blocks formatting typing, **Mohammed** will be bold.
+   //                         // options.blocks.openedBlock.ref.opening  contains  b.closing::: for example *** contains **, you can use these blocks formatting typing, **Mohammed** will be bold.
    //                         options.blocks.openedBlock.mayCloseAt = { ref: b, index: i, iof };
    //                      } else {
    //                         b.num--;
@@ -483,21 +629,21 @@ export default class OperatorsParser {
    //                   } else {
    //                      b.num--;
    //                   }
-   //                } else if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
+   //                } else if (str.slice(i, i + b.opening.length) === b.opening) {
    //                   b.num++;
-   //                   i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
-   //                   this.__realPos += b.openingChar.length - 1;
+   //                   i += b.opening.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+   //                   this.__realPos += b.opening.length - 1;
    //                }
    //             } else {
-   //                if (str.slice(i, i + b.openingChar.length) === b.openingChar) {
+   //                if (str.slice(i, i + b.opening.length) === b.opening) {
    //                   b.num++;
-   //                   i += b.openingChar.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
-   //                   this.__realPos += b.openingChar.length - 1;
+   //                   i += b.opening.length - 1; // -1 here as for loop will add 1 to i, I want to set the index just after the opening char 
+   //                   this.__realPos += b.opening.length - 1;
    //                   // if (!blocks.openedBlock) { /// if not open, then open
    //                   b.opened = true;
    //                   blocks.openedBlock = { ref: b, index: i };
    //                   // }
-   //                } else if (str.slice(i, i + b.closingChar.length) === b.closingChar) {
+   //                } else if (str.slice(i, i + b.closing.length) === b.closing) {
    //                   b.num--;
    //                }
    //             }
@@ -514,14 +660,14 @@ export default class OperatorsParser {
    //             /// if true, the bracket's block is defined.
    //             if (b.num === 0 && b.opened) { /// may other brackets' num be zero, as it does not exist or as it is closed but it closed inside the block that we are setting,,, e.g.::: " 1+2({1,2,3}^-1) "
    //                let index = {
-   //                   opening: blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length,
+   //                   opening: blocks.openedBlock.index + blocks.openedBlock.ref.opening.length,
    //                   closing: i
    //                };
    //                let _str = str.slice(index.opening, index.closing);
    //                if (checker.check(_str, b.content)) {
    //                   i = __parseBlock__(index, _str); /// __parseBlock__ returns the new_i
    //                } else {
-   //                   b.num++; // the considered closingChar found is not compatible, so continue shearching for another closing char
+   //                   b.num++; // the considered closing found is not compatible, so continue shearching for another closing char
    //                }
    //             }
    //          }
@@ -535,17 +681,17 @@ export default class OperatorsParser {
 
    //             opening:
    //                blocks.openedBlock.index +
-   //                // blocks.openedBlock.mayCloseAt.ref.openingChar.length +    this will be added later
+   //                // blocks.openedBlock.mayCloseAt.ref.opening.length +    this will be added later
    //                blocks.openedBlock.mayCloseAt.iof,
 
    //             closing: blocks.openedBlock.mayCloseAt.index
 
    //          };
-   //          /// the openingChar can be for another block e.g.::: (( and (,when we close with )) the blocks is ((content)), otherwise if we close with ) our block is (content) and the second "(" is the first char in the content 
+   //          /// the opening can be for another block e.g.::: (( and (,when we close with )) the blocks is ((content)), otherwise if we close with ) our block is (content) and the second "(" is the first char in the content 
    //          blocks.openedBlock.ref.opened = false;
    //          blocks.openedBlock.ref.num = 0;
    //          blocks.openedBlock = { ref: blocks.openedBlock.mayCloseAt.ref, index: index.opening };
-   //          index.opening += blocks.openedBlock.mayCloseAt.ref.openingChar.length;
+   //          index.opening += blocks.openedBlock.mayCloseAt.ref.opening.length;
 
    //          let _str = str.slice(index.opening, index.closing);
    //          this.__realPos = str.length - 1 - index.closing;
@@ -557,8 +703,8 @@ export default class OperatorsParser {
    //             if (blocks.openedBlock.ref.mustClose) {
    //                sendError('block is not closed.', this.__realPos);
    //             }
-   //             // the considered closingChar found is not compatible as content failed at the test, so continue shearching for another closing char
-   //             // so start just after the openingChar of the openedBlock.ref,,, 
+   //             // the considered closing found is not compatible as content failed at the test, so continue shearching for another closing char
+   //             // so start just after the opening of the openedBlock.ref,,, 
    //             // new_i = index.opening;
    //             this.__realPos -= _str.length;
    //             __parseBlocks__(index.opening);
@@ -568,7 +714,7 @@ export default class OperatorsParser {
    //          if (blocks.openedBlock.ref.mustClose) {
    //             sendError('block is not closed.', this.__realPos);
    //          } else {
-   //             let new_i = blocks.openedBlock.index + blocks.openedBlock.ref.openingChar.length;
+   //             let new_i = blocks.openedBlock.index + blocks.openedBlock.ref.opening.length;
    //             this.__realPos -= (str.length - 1) - new_i;
    //             blocks.openedBlock.ref.opened = false;
    //             blocks.openedBlock = null;
